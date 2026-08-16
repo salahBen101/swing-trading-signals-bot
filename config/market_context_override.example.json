@@ -1,0 +1,22 @@
+{
+  "ticker": "AAPL",
+  "short_interest_pct_float": null,
+  "days_to_cover": null,
+  "short_interest_as_of": null,
+  "short_interest_source": "",
+  "short_interest_verified": false,
+  "borrow_available_shares": null,
+  "borrow_fee_rate_pct": null,
+  "borrow_as_of": null,
+  "borrow_source": "",
+  "borrow_verified": false,
+  "next_earnings_date": null,
+  "earnings_as_of": null,
+  "earnings_source": "",
+  "earnings_verified": false,
+  "options_as_of": null,
+  "option_call_open_interest": null,
+  "option_put_open_interest": null,
+  "options_source": "",
+  "options_verified": false
+}

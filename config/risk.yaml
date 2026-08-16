@@ -1,0 +1,38 @@
+# Risk overlay parameters, doc Section 11 + 14. This is the strategy's spine, not a wrapper -
+# every value here is enforced in code (src/nq_scalper/risk/limits.py), not advisory.
+
+account:
+  # Sized for a 50k prop-firm evaluation account, which is what this is aimed at.
+  starting_equity_usd: 50000.0
+
+position_sizing:
+  # Volatility-targeted sizing (doc Section 11): risk_per_trade_pct of equity, divided by the
+  # ATR-based dollar stop distance, gives contract count. Hard min/max caps regardless.
+  risk_per_trade_pct: 0.375 # doc range 0.25-0.5
+  max_contracts: 3
+  min_contracts: 1
+
+daily_limits:
+  # Hard daily loss cap in R multiples (doc Section 11: "single most important rule for passing
+  # a prop evaluation"). Trading halts for the rest of the session once hit.
+  max_daily_loss_r: 4.0
+  # Consecutive-loss circuit breaker: pause and require a fresh, clean regime signal.
+  max_consecutive_losses: 3
+  consecutive_loss_cooldown_bars: 20
+
+drawdown:
+  # Trailing drawdown for a typical 50k prop evaluation: $2,500 = 5% of 50k. Firms differ
+  # (Apex 50k ~ $2,500, Topstep 50k ~ $2,000), and some trail off intraday equity peaks rather
+  # than closed balance, which is stricter still. CONFIRM YOUR FIRM'S EXACT RULE before
+  # trusting this number - it is the single limit that ends an evaluation.
+  trailing_drawdown_floor_pct: 5.0
+  # Start reducing size once the cushion to the floor shrinks below this fraction remaining.
+  size_reduction_cushion_pct: 40.0
+
+kill_switch:
+  # Absolute stop - if breached, the live runner flattens everything and refuses to open new
+  # positions until a human clears the flag file. Set below a typical 50k daily loss limit
+  # (~$1,100-1,250) so the bot stops before the firm does.
+  max_daily_loss_usd: 1000.0
+  max_consecutive_errors: 5
+  flag_file: "logs/KILL_SWITCH.flag"
