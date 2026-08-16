@@ -1,0 +1,7 @@
+pandas>=2.2
+numpy>=1.26
+yfinance>=0.2.54
+python-dotenv>=1.0
+
+# tests
+pytest>=8.0

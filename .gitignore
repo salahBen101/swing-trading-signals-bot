@@ -1,0 +1,44 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+.env
+config/secrets.yaml
+
+data_cache/
+logs/
+*.log
+*.db
+*.sqlite3
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+*.parquet
+*.csv
+!tests/**/*.csv
+
+ml_registry/
+
+# Raw vendor market data - large, licensed, not ours to redistribute
+*.zst
+*.dbn
+*.zip
+*.CHECKSUM
+*.sha256
+
+# Downloaded / derived market data caches. Reproducible from the fetch
+# scripts, and too large (and in places licensed) to belong in git.
+**/data/raw/
+**/data/cache/
+
+# Local session recordings and audit artifacts - large and not part of the project.
+.codex-mega-audit/
+
+
+# Scanner runtime output (paper-trade state, generated reports)
+output/
