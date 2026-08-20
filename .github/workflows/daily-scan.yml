@@ -1,0 +1,76 @@
+name: Daily RSI(2) scan and paper account
+
+# Runs on GitHub's machines, so your PC can be off.
+#
+# 21:30 UTC on weekdays = 17:30 New York in summer (EDT) and 16:30 in winter (EST).
+# Both are after the 16:00 close, which matters: paper_account.py refuses to record anything
+# from a session that is still trading, because a partial daily bar has an RSI that will
+# still move before the close.
+#
+# Market holidays need no special handling. On a holiday the latest bar is the previous
+# session, and the run is idempotent per bar date - it re-marks the same day and adds nothing.
+
+on:
+  schedule:
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch:        # lets you trigger a run by hand from the Actions tab
+
+permissions:
+  contents: write           # needed to commit the updated account state back
+
+concurrency:
+  group: daily-scan         # never let two runs write the state file at once
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run scanner
+        env:
+          NOTIFY_EMAIL_USER: ${{ secrets.NOTIFY_EMAIL_USER }}
+          NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
+          NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
+        run: python scanner/rsi2_scanner.py --tickers strong
+        continue-on-error: true      # a scanner hiccup must not skip the account update
+
+      - name: Update paper account
+        env:
+          NOTIFY_EMAIL_USER: ${{ secrets.NOTIFY_EMAIL_USER }}
+          NOTIFY_EMAIL_PASSWORD: ${{ secrets.NOTIFY_EMAIL_PASSWORD }}
+          NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
+        run: python scanner/paper_account.py --universe strong
+
+      - name: Commit the updated track record
+        run: |
+          git config user.name  "rsi2-bot"
+          git config user.email "actions@github.com"
+          git add -f output/paper_account.json
+          if git diff --staged --quiet; then
+            echo "no change to the account today"
+          else
+            git commit -m "paper account: $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Keep the HTML report as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-account-report
+          path: output/PAPER_ACCOUNT.html
+          retention-days: 90
+        if: always()

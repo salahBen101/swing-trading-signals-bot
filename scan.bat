@@ -22,12 +22,12 @@ if "!RUN_PAPER!"=="1" (
     echo ============================================================
     echo   Updating paper-trading journal
     echo ============================================================
-    ".venv\Scripts\python.exe" "scanner\paper_options.py" --universe strong
+    ".venv\Scripts\python.exe" "scanner\paper_account.py" --universe strong
     REM HTML, not the .md - Windows has no reliable handler for markdown but always has a browser.
-    if exist "output\PAPER_OPTIONS.html" (
+    if exist "output\PAPER_ACCOUNT.html" (
         echo.
         echo Opening journal...
-        start "" "output\PAPER_OPTIONS.html"
+        start "" "output\PAPER_ACCOUNT.html"
     )
 )
 

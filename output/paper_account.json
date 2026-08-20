@@ -1,0 +1,339 @@
+{
+  "started": "2026-08-15",
+  "start_equity": 50000.0,
+  "cash": 41955.0,
+  "positions": [
+    {
+      "ticker": "AVGO",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-08-14",
+      "entry_spot": 392.989990234375,
+      "entry_rsi2": 4.640692977764445,
+      "expiry": "2026-09-18",
+      "strike": 370.0,
+      "dte_at_entry": 34,
+      "contracts": 1,
+      "entry_ask": 37.55,
+      "entry_spread_pct": 3.799185888738124,
+      "entry_delta": 0.6907379969855896,
+      "cost": 3755.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 362.4800109863281,
+      "last_mid": 17.85,
+      "last_bid": 17.4,
+      "days_held": 3,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-14",
+          392.989990234375,
+          36.849999999999994
+        ],
+        [
+          "2026-08-17",
+          392.42999267578125,
+          36.375
+        ],
+        [
+          "2026-08-18",
+          380.8299865722656,
+          28.200000000000003
+        ],
+        [
+          "2026-08-19",
+          360.3550109863281,
+          16.7
+        ]
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-08-17",
+      "entry_spot": 261.30999755859375,
+      "entry_rsi2": 4.1537538278105615,
+      "expiry": "2026-08-28",
+      "strike": 255.0,
+      "dte_at_entry": 11,
+      "contracts": 1,
+      "entry_ask": 9.15,
+      "entry_spread_pct": 3.899721448467962,
+      "entry_delta": 0.704421347303875,
+      "cost": 915.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "CLOSED",
+      "last_spot": 264.4649963378906,
+      "last_mid": 10.35,
+      "last_bid": 10.0,
+      "days_held": 3,
+      "exit_date": "2026-08-19",
+      "exit_bid": 10.0,
+      "exit_reason": "RSI(2) 72.0 > 65",
+      "proceeds": 1000.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-17",
+          261.30999755859375,
+          8.975000000000001
+        ],
+        [
+          "2026-08-18",
+          261.3066101074219,
+          8.925
+        ],
+        [
+          "2026-08-19",
+          264.4649963378906,
+          10.35
+        ]
+      ]
+    },
+    {
+      "ticker": "BRK-B",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-08-17",
+      "entry_spot": 498.2300109863281,
+      "entry_rsi2": 3.0187124199221103,
+      "expiry": "2026-09-18",
+      "strike": 465.0,
+      "dte_at_entry": 32,
+      "contracts": 1,
+      "entry_ask": 37.35,
+      "entry_spread_pct": 4.517453798767963,
+      "entry_delta": 0.8332989229137009,
+      "cost": 3735.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "CLOSED",
+      "last_spot": 505.3900146484375,
+      "last_mid": 42.025,
+      "last_bid": 40.8,
+      "days_held": 3,
+      "exit_date": "2026-08-19",
+      "exit_bid": 40.8,
+      "exit_reason": "RSI(2) 66.8 > 65",
+      "proceeds": 4080.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-17",
+          498.2300109863281,
+          36.525000000000006
+        ],
+        [
+          "2026-08-18",
+          502.9949951171875,
+          40.125
+        ],
+        [
+          "2026-08-19",
+          505.3900146484375,
+          42.025
+        ]
+      ]
+    },
+    {
+      "ticker": "DIA",
+      "sector": "broad mkt",
+      "tier": "retrospective",
+      "opened": "2026-08-18",
+      "entry_spot": 533.239990234375,
+      "entry_rsi2": 4.54375171879073,
+      "expiry": "2026-08-28",
+      "strike": 528.0,
+      "dte_at_entry": 10,
+      "contracts": 1,
+      "entry_ask": 7.85,
+      "entry_spread_pct": 3.2362459546925573,
+      "entry_delta": 0.7011295930818426,
+      "cost": 785.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "CLOSED",
+      "last_spot": 536.5399780273438,
+      "last_mid": 9.25,
+      "last_bid": 9.1,
+      "days_held": 2,
+      "exit_date": "2026-08-19",
+      "exit_bid": 9.1,
+      "exit_reason": "RSI(2) 71.4 > 65",
+      "proceeds": 910.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-18",
+          533.239990234375,
+          7.725
+        ],
+        [
+          "2026-08-19",
+          536.5399780273438,
+          9.25
+        ]
+      ]
+    },
+    {
+      "ticker": "PANW",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-08-19",
+      "entry_spot": 356.8800048828125,
+      "entry_rsi2": 3.8103279037898687,
+      "expiry": "2026-09-18",
+      "strike": 350.0,
+      "dte_at_entry": 30,
+      "contracts": 1,
+      "entry_ask": 28.45,
+      "entry_spread_pct": 4.676258992805758,
+      "entry_delta": 0.5876678951398007,
+      "cost": 2845.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 359.760009765625,
+      "last_mid": 31.0,
+      "last_bid": 30.1,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-19",
+          356.8800048828125,
+          27.799999999999997
+        ]
+      ]
+    },
+    {
+      "ticker": "C",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-08-19",
+      "entry_spot": 133.13999938964844,
+      "entry_rsi2": 4.118727136185555,
+      "expiry": "2026-09-18",
+      "strike": 130.0,
+      "dte_at_entry": 30,
+      "contracts": 1,
+      "entry_ask": 6.5,
+      "entry_spread_pct": 4.724409448818895,
+      "entry_delta": 0.6381437896292875,
+      "cost": 650.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 132.88999938964844,
+      "last_mid": 6.15,
+      "last_bid": 6.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-19",
+          133.13999938964844,
+          6.35
+        ]
+      ]
+    },
+    {
+      "ticker": "KRE",
+      "sector": "finl ETF",
+      "tier": "retrospective",
+      "opened": "2026-08-19",
+      "entry_spot": 75.11499786376953,
+      "entry_rsi2": 3.43677395827676,
+      "expiry": "2026-09-18",
+      "strike": 72.0,
+      "dte_at_entry": 30,
+      "contracts": 1,
+      "entry_ask": 4.25,
+      "entry_spread_pct": 2.3809523809523725,
+      "entry_delta": 0.7317079550495686,
+      "cost": 425.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 75.0,
+      "last_mid": 3.65,
+      "last_bid": 3.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-19",
+          75.11499786376953,
+          4.2
+        ]
+      ]
+    },
+    {
+      "ticker": "XLI",
+      "sector": "indl ETF",
+      "tier": "retrospective",
+      "opened": "2026-08-19",
+      "entry_spot": 182.11500549316406,
+      "entry_rsi2": 3.8941579979778425,
+      "expiry": "2026-09-18",
+      "strike": 175.0,
+      "dte_at_entry": 30,
+      "contracts": 1,
+      "entry_ask": 9.25,
+      "entry_spread_pct": 3.8567493112947626,
+      "entry_delta": 0.7514358437089694,
+      "cost": 925.0,
+      "feat": {},
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 181.9499969482422,
+      "last_mid": 9.2,
+      "last_bid": 6.75,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-19",
+          182.11500549316406,
+          9.075
+        ]
+      ]
+    }
+  ],
+  "equity": [
+    {
+      "date": "2026-08-19",
+      "equity": 48740.0,
+      "cash": 41955.0,
+      "open": 5,
+      "realised": 555.0
+    }
+  ],
+  "missed": [],
+  "migrated_from": "paper_options_state.json",
+  "ml_verdict": "dormant - 0/40 closed trades. It will not score anything until it has a real sample."
+}

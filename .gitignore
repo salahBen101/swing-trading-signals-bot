@@ -41,4 +41,7 @@ ml_registry/
 
 
 # Scanner runtime output (paper-trade state, generated reports)
-output/
+output/*
+# The paper account's state is the track record itself - it has to survive
+# between scheduled runs, so it is the one thing in output/ that is committed.
+!output/paper_account.json
