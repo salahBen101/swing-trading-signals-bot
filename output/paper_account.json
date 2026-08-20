@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 41955.0,
+  "cash": 25275.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -21,10 +21,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 362.4800109863281,
-      "last_mid": 17.85,
-      "last_bid": 17.4,
-      "days_held": 3,
+      "last_spot": 364.0299987792969,
+      "last_mid": 18.625,
+      "last_bid": 18.2,
+      "days_held": 4,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -50,6 +50,11 @@
           "2026-08-19",
           360.3550109863281,
           16.7
+        ],
+        [
+          "2026-08-20",
+          364.0299987792969,
+          18.625
         ]
       ]
     },
@@ -201,10 +206,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 359.760009765625,
-      "last_mid": 31.0,
-      "last_bid": 30.1,
-      "days_held": 0,
+      "last_spot": 349.55999755859375,
+      "last_mid": 23.075000000000003,
+      "last_bid": 22.05,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -215,6 +220,11 @@
           "2026-08-19",
           356.8800048828125,
           27.799999999999997
+        ],
+        [
+          "2026-08-20",
+          349.55999755859375,
+          23.075000000000003
         ]
       ]
     },
@@ -236,10 +246,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 132.88999938964844,
-      "last_mid": 6.15,
-      "last_bid": 6.0,
-      "days_held": 0,
+      "last_spot": 129.6699981689453,
+      "last_mid": 4.175,
+      "last_bid": 4.0,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -250,6 +260,11 @@
           "2026-08-19",
           133.13999938964844,
           6.35
+        ],
+        [
+          "2026-08-20",
+          129.6699981689453,
+          4.175
         ]
       ]
     },
@@ -271,10 +286,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 75.0,
-      "last_mid": 3.65,
-      "last_bid": 3.0,
-      "days_held": 0,
+      "last_spot": 74.70999908447266,
+      "last_mid": 3.575,
+      "last_bid": 2.15,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -285,6 +300,11 @@
           "2026-08-19",
           75.11499786376953,
           4.2
+        ],
+        [
+          "2026-08-20",
+          74.70999908447266,
+          3.575
         ]
       ]
     },
@@ -306,10 +326,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 181.9499969482422,
-      "last_mid": 9.2,
-      "last_bid": 6.75,
-      "days_held": 0,
+      "last_spot": 179.77000427246094,
+      "last_mid": 7.35,
+      "last_bid": 5.2,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -320,6 +340,187 @@
           "2026-08-19",
           182.11500549316406,
           9.075
+        ],
+        [
+          "2026-08-20",
+          179.77000427246094,
+          7.35
+        ]
+      ]
+    },
+    {
+      "ticker": "MS",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-08-20",
+      "entry_spot": 207.4499969482422,
+      "entry_rsi2": 1.9977728193619555,
+      "expiry": "2026-09-18",
+      "strike": 200.0,
+      "dte_at_entry": 29,
+      "contracts": 4,
+      "entry_ask": 12.35,
+      "entry_spread_pct": 9.322033898305081,
+      "entry_delta": 0.6769763580783832,
+      "cost": 4940.0,
+      "feat": {
+        "rsi2": 1.9977728193619555,
+        "above_200": 10.399768861680148,
+        "below_5": -3.493674935237101,
+        "vol20": 1.7388378474294814,
+        "ret5": -5.005040612777522,
+        "off_high": -9.232118058093963,
+        "breadth": 4.0,
+        "mkt_above_200": 7.844000183642552
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 207.4499969482422,
+      "last_mid": 11.8,
+      "last_bid": 11.25,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-20",
+          207.4499969482422,
+          11.8
+        ]
+      ]
+    },
+    {
+      "ticker": "MDY",
+      "sector": "broad mkt",
+      "tier": "retrospective",
+      "opened": "2026-08-20",
+      "entry_spot": 696.27001953125,
+      "entry_rsi2": 3.033985419413895,
+      "expiry": "2026-09-18",
+      "strike": 675.0,
+      "dte_at_entry": 29,
+      "contracts": 1,
+      "entry_ask": 30.5,
+      "entry_spread_pct": 13.286713286713288,
+      "entry_delta": 0.7157409220697152,
+      "cost": 3050.0,
+      "feat": {
+        "rsi2": 3.033985419413895,
+        "above_200": 7.419478642947563,
+        "below_5": -1.523805406546197,
+        "vol20": 0.8742487697546973,
+        "ret5": -2.565065306594483,
+        "off_high": -2.8790161089194632,
+        "breadth": 4.0,
+        "mkt_above_200": 7.844000183642552
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 696.27001953125,
+      "last_mid": 28.6,
+      "last_bid": 26.7,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-20",
+          696.27001953125,
+          28.6
+        ]
+      ]
+    },
+    {
+      "ticker": "QQQ",
+      "sector": "broad mkt",
+      "tier": "retrospective",
+      "opened": "2026-08-20",
+      "entry_spot": 710.9299926757812,
+      "entry_rsi2": 3.847593770865842,
+      "expiry": "2026-09-18",
+      "strike": 690.0,
+      "dte_at_entry": 29,
+      "contracts": 1,
+      "entry_ask": 31.55,
+      "entry_spread_pct": 0.731668522347703,
+      "entry_delta": 0.7007223995726308,
+      "cost": 3155.0,
+      "feat": {
+        "rsi2": 3.847593770865842,
+        "above_200": 8.97598215422355,
+        "below_5": -1.4092531406283748,
+        "vol20": 1.4474311323341715,
+        "ret5": -2.8877039677811855,
+        "off_high": -4.72150500385069,
+        "breadth": 4.0,
+        "mkt_above_200": 7.844000183642552
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 710.9299926757812,
+      "last_mid": 31.435000000000002,
+      "last_bid": 31.32,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-20",
+          710.9299926757812,
+          31.435000000000002
+        ]
+      ]
+    },
+    {
+      "ticker": "NVDA",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-08-20",
+      "entry_spot": 216.85000610351562,
+      "entry_rsi2": 4.705380458139459,
+      "expiry": "2026-09-25",
+      "strike": 205.0,
+      "dte_at_entry": 36,
+      "contracts": 3,
+      "entry_ask": 18.45,
+      "entry_spread_pct": 3.586206896551716,
+      "entry_delta": 0.6965220626498347,
+      "cost": 5535.0,
+      "feat": {
+        "rsi2": 4.705380458139459,
+        "above_200": 11.063710070189892,
+        "below_5": -1.8174058853891784,
+        "vol20": 2.400691022963234,
+        "ret5": -3.750553410467994,
+        "off_high": -8.013064795740066,
+        "breadth": 4.0,
+        "mkt_above_200": 7.844000183642552
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 216.85000610351562,
+      "last_mid": 18.125,
+      "last_bid": 17.8,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-20",
+          216.85000610351562,
+          18.125
         ]
       ]
     }
@@ -330,6 +531,13 @@
       "equity": 48740.0,
       "cash": 41955.0,
       "open": 5,
+      "realised": 555.0
+    },
+    {
+      "date": "2026-08-20",
+      "equity": 47116.0,
+      "cash": 25275.0,
+      "open": 9,
       "realised": 555.0
     }
   ],
