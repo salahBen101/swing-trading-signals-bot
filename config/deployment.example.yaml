@@ -1,0 +1,23 @@
+# Example only. Copying or editing this file does not enable Stage 3/4.
+# A human must review the exact account, rule profile, execution route, repository revision,
+# and artifact hashes. The runtime rechecks them on every startup and still fails closed
+# while the selected profile contains unresolved conflicts.
+schema_version: 1
+stage: 3
+approved: false
+approved_by: ""
+approved_at: "1970-01-01T00:00:00+00:00"
+account_id: ""
+prop_profile_id: ""
+prop_phase: evaluation
+prop_profile_sha256: ""
+source_snapshot_sha256: ""
+runtime_config_sha256: ""
+strategy_artifact_sha256: ""
+code_revision: ""
+execution_route: ""
+execution_route_verified: false
+sole_owner_attested: false
+firm_exclusive_use_attested: false
+production_frozen: false
+notes: "Template only; never use as approval."

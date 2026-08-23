@@ -1,0 +1,32 @@
+schema_version: 1
+normalization_version: 1
+captured_on: 2026-08-22
+sources:
+  https://help.tradeify.co/en/articles/10468222-rules-supported-trading-products-assets:
+    content_sha256: cdb0bc6b2df45f80703088760517f195435519c26b22246f3b7b6aefdb99b1b0
+  https://help.tradeify.co/en/articles/10468318-guidelines-for-traders:
+    content_sha256: f7a87e4ad3d606b23ac8b44a471602465946d80ca2233154393ffeef1d170792
+  https://help.tradeify.co/en/articles/10468320-rules-consistency-rule:
+    content_sha256: 3f945ad912d62bba0875870754431c286e73e32ccf9f8435bf52e6f742339e78
+  https://help.tradeify.co/en/articles/10468321-rules-daily-loss-limit:
+    content_sha256: a81fdb7637b984250c23448418af8ec7c4b0a22f75d918d0ab8d6e6c3e7dfdeb
+  https://help.tradeify.co/en/articles/10495868-rules-hedging-correlated-products:
+    content_sha256: eede576bbc41798865e5f7c4e6e5ea5293679a096326fa008c87d6de397b5100
+  https://help.tradeify.co/en/articles/10495874-rules-news-trading:
+    content_sha256: 0c13e808adcbbe97efe033b255d1a418c5cd48956d4f9007a30f08df290194ba
+  https://help.tradeify.co/en/articles/10495876-rules-permitted-times-to-trade:
+    content_sha256: ecacba6fb4c84ab8a082f018f12b7bbc9612acc7e72a24716597c023fed0ada8
+  https://help.tradeify.co/en/articles/10495897-rules-trailing-max-drawdowns:
+    content_sha256: b305c786311b9c71dcdf45374ef6f87c70877fa0deff1088f42c1ce8de9a828c
+  https://help.tradeify.co/en/articles/10495915-growth-evaluation-accounts:
+    content_sha256: 0c860c4e16573ee6943011504a3673e11ae614306aed46b0147f385946fcf5ab
+  https://help.tradeify.co/en/articles/10495932-lightning-funded-account-payout-policy:
+    content_sha256: 4a8b6e235f5ee264d8c09cb19d53b828d67477ba5119c277bc95ab3293fa3df6
+  https://help.tradeify.co/en/articles/10495938-lightning-funded-accounts:
+    content_sha256: c5e24b513e9c729cf81fe48f45a33a0ae6c4eb8677243274ab7194a89d4578d1
+  https://help.tradeify.co/en/articles/11083796-growth-funded-account-payout-policy:
+    content_sha256: a6e987fae3b5c418a8de495300dd78d9410c7ff4f4b68c49aa64bb7314786451
+  https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts:
+    content_sha256: af6dd86c488eb41cf600c2c1c81c8022dbdc6f0235ba290a665aa215cb55c54d
+  https://help.tradeify.co/en/articles/12853966-select-flex-and-select-daily-payout-policies:
+    content_sha256: cd8efe13c48476611b234f7fc12f4ea2cf3c4af327d598e6f4c111047632cf8c

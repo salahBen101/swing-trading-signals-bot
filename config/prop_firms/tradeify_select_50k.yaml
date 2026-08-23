@@ -1,0 +1,181 @@
+schema_version: 1
+profile_id: tradeify_select_50k_current
+firm: Tradeify
+program: Select
+account_size_usd: 50000
+purchase_cohort: current_dashboard_terms
+verified_on: 2026-08-22
+reverify_after_hours: 24
+
+sources:
+  - title: Select Evaluation Accounts
+    url: https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts
+    checked_on: 2026-08-22
+  - title: Select Flex and Select Daily Payout Policies
+    url: https://help.tradeify.co/en/articles/12853966-select-flex-and-select-daily-payout-policies
+    checked_on: 2026-08-22
+  - title: Rules — Trailing Max Drawdowns
+    url: https://help.tradeify.co/en/articles/10495897-rules-trailing-max-drawdowns
+    checked_on: 2026-08-22
+  - title: Rules — Daily Loss Limit
+    url: https://help.tradeify.co/en/articles/10468321-rules-daily-loss-limit
+    checked_on: 2026-08-22
+  - title: Rules — Consistency Rule
+    url: https://help.tradeify.co/en/articles/10468320-rules-consistency-rule
+    checked_on: 2026-08-22
+  - title: Rules — Permitted Times to Trade
+    url: https://help.tradeify.co/en/articles/10495876-rules-permitted-times-to-trade
+    checked_on: 2026-08-22
+  - title: Guidelines for Traders
+    url: https://help.tradeify.co/en/articles/10468318-guidelines-for-traders
+    checked_on: 2026-08-22
+  - title: Rules — Hedging and Correlated Products
+    url: https://help.tradeify.co/en/articles/10495868-rules-hedging-correlated-products
+    checked_on: 2026-08-22
+  - title: Rules — Supported Trading Products and Assets
+    url: https://help.tradeify.co/en/articles/10468222-rules-supported-trading-products-assets
+    checked_on: 2026-08-22
+  - title: Rules — News Trading
+    url: https://help.tradeify.co/en/articles/10495874-rules-news-trading
+    checked_on: 2026-08-22
+
+trading_window:
+  timezone: America/New_York
+  session_start: "18:00"
+  session_end: "17:00"
+  flatten_by: "16:45"
+  holiday_flatten_by: "12:59"
+
+compliance:
+  automation_allowed: true
+  bot_owner_must_prove_sole_ownership: true
+  bot_exclusive_to_firm: true
+  high_frequency_bots_allowed: false
+  hedging_allowed: false
+  news_trading_allowed: true
+  averaging_down_firm_allowed: true
+  tradovate_api_allowed: false
+  bot_cross_firm_deployment_allowed: false
+  proof_video_may_be_required: true
+  platform_error_exploitation_allowed: false
+  cross_account_hedging_allowed: false
+  minimum_hold_seconds_for_payout: 10
+  min_fraction_trades_over_hold: 0.50
+  min_fraction_profit_over_hold: 0.50
+  minimum_trades_per_week: 1
+
+phases:
+  evaluation:
+    phase: evaluation
+    starting_balance_usd: 50000
+    profit_target_usd: 3000
+    minimum_trading_days: 3
+    daily_loss_limit_usd: null
+    daily_loss_breach_kind: null
+    drawdown:
+      amount_usd: 2000
+      method: end_of_day_trailing
+      breach_kind: hard
+      enforced_intraday: true
+      breach_at_or_below: true
+      high_water_mark_basis: highest_end_of_day_balance
+      breach_basis: real_time_net_liquidation
+      locks: false
+    contracts:
+      max_minis: 4
+      max_micros: 40
+      micro_per_mini: 10
+      mixed_sizes_allowed: true
+      aggregate_gross_open_position: true
+    consistency:
+      max_best_day_fraction: 0.40
+      applies_to: [evaluation_pass]
+      profit_excludes_commissions: true
+    payout: {}
+
+  sim_funded_flex:
+    phase: sim_funded
+    starting_balance_usd: 50000
+    profit_target_usd: null
+    minimum_trading_days: 0
+    daily_loss_limit_usd: null
+    daily_loss_breach_kind: null
+    drawdown:
+      amount_usd: 2000
+      method: end_of_day_trailing
+      breach_kind: hard
+      enforced_intraday: true
+      breach_at_or_below: true
+      high_water_mark_basis: highest_end_of_day_balance
+      breach_basis: real_time_net_liquidation
+      locks: true
+      lock_trigger_balance_usd: 52100
+      locked_floor_balance_usd: 50100
+    contracts:
+      max_minis: 4
+      max_micros: 40
+      micro_per_mini: 10
+      mixed_sizes_allowed: true
+      aggregate_gross_open_position: true
+      scale_tiers:
+        - {min_end_of_day_balance_usd: 50000, max_minis: 2, max_micros: 20}
+        - {min_end_of_day_balance_usd: 51500, max_minis: 3, max_micros: 30}
+        - {min_end_of_day_balance_usd: 52000, max_minis: 4, max_micros: 40}
+    consistency: {}
+    payout:
+      eligible: true
+      profit_split_trader: 0.90
+      winning_days_required: 5
+      winning_day_min_profit_usd: 150
+      winning_day_strictly_greater: false
+      max_payout_by_request_usd: [3000]
+      max_fraction_total_profit: 0.50
+      require_positive_cycle_after_first: true
+      locks_drawdown_on_payout: true
+
+  sim_funded_daily:
+    phase: sim_funded
+    starting_balance_usd: 50000
+    profit_target_usd: null
+    minimum_trading_days: 0
+    daily_loss_limit_usd: 1000
+    daily_loss_breach_kind: soft
+    drawdown:
+      amount_usd: 2000
+      method: end_of_day_trailing
+      breach_kind: hard
+      enforced_intraday: true
+      breach_at_or_below: true
+      high_water_mark_basis: highest_end_of_day_balance
+      breach_basis: real_time_net_liquidation
+      locks: true
+      lock_trigger_balance_usd: 52100
+      locked_floor_balance_usd: 50100
+    contracts:
+      max_minis: 4
+      max_micros: 40
+      micro_per_mini: 10
+      mixed_sizes_allowed: true
+      aggregate_gross_open_position: true
+      scale_tiers:
+        - {min_end_of_day_balance_usd: 50000, max_minis: 2, max_micros: 20}
+        - {min_end_of_day_balance_usd: 51500, max_minis: 3, max_micros: 30}
+        - {min_end_of_day_balance_usd: 52000, max_minis: 4, max_micros: 40}
+    consistency: {}
+    payout:
+      eligible: true
+      profit_split_trader: 0.90
+      minimum_balance_usd: 52100
+      minimum_balance_must_remain_after_payout: true
+      minimum_payout_usd: 250
+      max_payout_by_request_usd: [1000]
+      cycle_profit_multiplier: 2.0
+      require_positive_cycle_after_first: true
+      locks_drawdown_on_payout: true
+
+ambiguity_notes:
+  - Accounts predating the current dashboard may retain a $2,500 evaluation target; this profile is only for current terms and must not be used for legacy accounts.
+  - The dedicated July 2026 permitted-times rule says 16:45 ET while a general FAQ says 16:59 ET; this profile enforces the safer 16:45 deadline.
+  - Firm permission for DCA does not relax this system's stricter personal ban on averaging down.
+  - Select Daily wording is inconsistent about whether its 2x continuity formula applies to payout one; the simulator applies it from payout two because the first-cycle buffer already dominates the cap.
+  - Tradovate API access is unavailable for Evaluation and Sim Funded accounts; no automated Stage 3 route is assumed.

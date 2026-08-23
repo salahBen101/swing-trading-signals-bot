@@ -1,7 +1,19 @@
+# Pip fallback for the whole repository (the futures system in src/tradebot and the
+# older RSI(2) scanner). The supported path is `uv sync --locked --extra dev`, which
+# installs from the checked-in uv.lock; this file exists for environments without uv.
+#
+# Every package the source imports directly is listed, even where a current release of
+# pandas or yfinance happens to pull it in transitively. Depending on someone else's
+# dependency graph is how an install breaks silently on an unrelated upgrade.
+
 pandas>=2.2
 numpy>=1.26
-yfinance>=0.2.54
+pyarrow>=15.0      # parquet bar store
+PyYAML>=6.0        # typed config and prop-firm profiles
 python-dotenv>=1.0
+
+# scanner only
+yfinance>=0.2.54
 scikit-learn>=1.4
 
 # tests

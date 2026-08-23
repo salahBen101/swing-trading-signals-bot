@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tradebot</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #262b36; --text: #e6e9ef;
+    --muted: #8b94a7; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
+    --accent: #60a5fa; --paper: #22c55e; --live: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  h1 { font-size: 16px; margin: 0; letter-spacing: .08em; text-transform: uppercase; }
+  .badge {
+    padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    letter-spacing: .05em;
+  }
+  .badge.paper { background: rgba(34,197,94,.15); color: var(--paper); border: 1px solid var(--paper); }
+  .badge.live  { background: rgba(239,68,68,.15); color: var(--live);  border: 1px solid var(--live); }
+  .badge.state { background: rgba(96,165,250,.15); color: var(--accent); border: 1px solid var(--accent); }
+  .badge.ok    { background: rgba(74,222,128,.15); color: var(--good); border: 1px solid var(--good); }
+  .badge.degraded { background: rgba(251,191,36,.15); color: var(--warn); border: 1px solid var(--warn); }
+  .badge.down  { background: rgba(248,113,113,.15); color: var(--bad); border: 1px solid var(--bad); }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-weight: 700; letter-spacing: .06em; cursor: pointer;
+    border-radius: 6px; padding: 10px 20px; border: 1px solid transparent;
+  }
+  #stop { background: var(--live); color: #fff; }
+  #stop { font-size: 15px; padding: 13px 26px; box-shadow: 0 0 0 2px rgba(239,68,68,.18); }
+  #stop:hover { filter: brightness(1.15); }
+  main { padding: 20px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { font-size: 12px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 8px 4px 0; }
+  td { padding: 3px 8px 3px 0; white-space: nowrap; }
+  tbody tr:hover { background: rgba(255,255,255,.03); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pos { color: var(--good); } .neg { color: var(--bad); } .muted { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 3px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .bar > i.hot { background: var(--warn); } .bar > i.crit { background: var(--bad); }
+  .scroll { max-height: 300px; overflow: auto; }
+  .empty { color: var(--muted); font-style: italic; padding: 8px 0; }
+  svg { width: 100%; height: 180px; display: block; }
+  .log { font-size: 12px; }
+  .log .ERROR { color: var(--bad); } .log .WARN { color: var(--warn); } .log .INFO { color: var(--muted); }
+  footer { padding: 10px 20px 30px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>tradebot</h1>
+  <span id="mode" class="badge paper">PAPER</span>
+  <span id="state" class="badge state">—</span>
+  <span id="health" class="badge ok">—</span>
+  <span id="strategy" class="muted">—</span>
+  <span class="spacer"></span>
+  <span id="served" class="muted"></span>
+  <button id="stop" title="Flatten everything and refuse new entries.">STOP TRADING</button>
+</header>
+
+<main>
+  <section>
+    <h2>Prop account</h2>
+    <div id="prop-account"></div>
+  </section>
+
+  <section>
+    <h2>Bot</h2>
+    <dl class="kv" id="bot"></dl>
+  </section>
+
+  <section>
+    <h2>Current trade</h2>
+    <div id="position"></div>
+  </section>
+
+  <section>
+    <h2>Session and health</h2>
+    <dl class="kv" id="session"></dl>
+  </section>
+
+  <section>
+    <h2>Risk limits</h2>
+    <div id="limits"></div>
+  </section>
+
+  <section>
+    <h2>Statistics</h2>
+    <dl class="kv" id="statistics"></dl>
+  </section>
+
+  <section class="wide">
+    <h2>Equity curve</h2>
+    <svg id="equity" viewBox="0 0 800 180" preserveAspectRatio="none"></svg>
+    <div id="equity-note" class="muted"></div>
+  </section>
+
+  <section class="wide">
+    <h2>Trades</h2>
+    <div class="scroll"><table id="trades"></table></div>
+  </section>
+
+  <section>
+    <h2>Rejected signals</h2>
+    <div class="scroll"><table id="rejections"></table></div>
+  </section>
+
+  <section>
+    <h2>System log</h2>
+    <div class="scroll log"><table id="logs"></table></div>
+  </section>
+</main>
+
+<footer>
+  Read-only except STOP TRADING. Loopback only, no authentication. The dashboard cannot
+  clear the kill switch or place a trade.
+</footer>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? "—" : v).replace(/[&<>"']/g, (ch) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+})[ch]);
+const money = (v) => (v == null ? "—" : (v < 0 ? "-$" : "$") + Math.abs(v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+const pct = (v) => (v == null ? "—" : (v * 100).toFixed(1) + "%");
+const num = (v, d = 2) => (v == null ? "—" : Number(v).toFixed(d));
+const sign = (v) => (v > 0 ? "pos" : v < 0 ? "neg" : "muted");
+const clock = (iso) => (iso ? String(iso).slice(11, 19) : "—");
+
+function table(el, columns, rows, renderRow) {
+  if (!rows.length) { el.innerHTML = `<tbody><tr><td class="empty">nothing yet</td></tr></tbody>`; return; }
+  const head = columns.map((c) => `<th class="${c.num ? "num" : ""}">${c.label}</th>`).join("");
+  el.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${rows.map(renderRow).join("")}</tbody>`;
+}
+
+function renderPosition(p) {
+  if (!p) { $("position").innerHTML = `<div class="empty">flat</div>`; return; }
+  $("position").innerHTML = `
+    <dl class="kv">
+      <dt>side</dt><dd class="${p.side === "BUY" ? "pos" : "neg"}">${esc(p.side)}</dd>
+      <dt>quantity</dt><dd>${p.quantity}</dd>
+      <dt>entry</dt><dd>${num(p.entry_price)}</dd>
+      <dt>stop</dt><dd>${num(p.stop)}</dd>
+      <dt>target</dt><dd>${p.target == null ? "—" : num(p.target)}</dd>
+      <dt>maximum loss</dt><dd class="neg">${money(p.maximum_loss_usd)}</dd>
+      <dt>reward : risk</dt><dd>${num(p.expected_reward_risk)}</dd>
+      <dt>bars held</dt><dd>${p.bars_held}</dd>
+      <dt>unrealised</dt><dd class="${sign(p.unrealized_usd)}">${money(p.unrealized_usd)}</dd>
+      <dt>R multiple</dt><dd class="${sign(p.r_multiple)}">${num(p.r_multiple)}</dd>
+    </dl>`;
+}
+
+function renderPropAccount(account) {
+  if (!account) {
+    $("prop-account").innerHTML = `<div class="empty">no reconciled prop state</div>`;
+    return;
+  }
+  const distance = account.distance_to_prop_failure_usd ?? account.remaining_prop_drawdown_usd;
+  const cls = distance != null && distance <= (account.internal_safety_buffer_usd ?? 0) ? "neg" : "";
+  $("prop-account").innerHTML = `
+    <dl class="kv">
+      <dt>profile</dt><dd>${esc(account.profile_id)}</dd>
+      <dt>phase</dt><dd>${esc(account.phase)}</dd>
+      <dt>balance</dt><dd>${money(account.current_balance_usd)}</dd>
+      <dt>high-water mark</dt><dd>${money(account.highest_end_of_day_balance_usd)}</dd>
+      <dt>prop failure level</dt><dd>${money(account.drawdown_floor_usd)}</dd>
+      <dt>distance to failure</dt><dd class="${cls}">${money(distance)}</dd>
+      <dt>internal stop level</dt><dd>${money(account.internal_safety_threshold_usd)}</dd>
+      <dt>internal buffer</dt><dd>${money(account.internal_safety_buffer_usd)}</dd>
+      <dt>today's P&amp;L</dt><dd class="${sign(account.daily_pnl_usd)}">${money(account.daily_pnl_usd)}</dd>
+      <dt>firm daily risk left</dt><dd>${money(account.remaining_firm_daily_risk_usd)}</dd>
+      <dt>consistency</dt><dd>${esc(account.consistency_status || (account.payout_consistency_met === false ? "NOT MET" : "—"))}</dd>
+      <dt>payout</dt><dd>${esc(account.payout_eligible ? "ELIGIBLE" : (account.payout_status || "not eligible"))}</dd>
+    </dl>`;
+}
+
+function renderBot(s, risk) {
+  const deployment = s.deployment || {};
+  $("bot").innerHTML = `
+    <dt>status</dt><dd class="${["LOCKED", "KILLED", "ERROR"].includes(s.state) ? "neg" : ""}">${esc(s.state)}</dd>
+    <dt>stage</dt><dd>${esc(deployment.label || deployment.stage)}</dd>
+    <dt>mode</dt><dd>${esc(s.paper === false ? "FUNDED / LIVE" : (s.mode || "PAPER"))}</dd>
+    <dt>strategy</dt><dd>${esc(s.strategy)}</dd>
+    <dt>instrument</dt><dd>${esc(s.instrument)}</dd>
+    <dt>trades remaining</dt><dd>${risk.trades_remaining ?? "—"}</dd>
+    <dt>risk remaining</dt><dd>${money(risk.remaining_daily_risk_usd)}</dd>
+    <dt>lock reason</dt><dd class="${risk.halted ? "neg" : "muted"}">${esc(risk.halt_reason || "none")}</dd>`;
+}
+
+function renderStatistics(stats) {
+  stats = stats || {};
+  $("statistics").innerHTML = `
+    <dt>win rate</dt><dd>${pct(stats.win_rate)}</dd>
+    <dt>expectancy</dt><dd class="${sign(stats.expectancy_usd)}">${money(stats.expectancy_usd)}</dd>
+    <dt>profit factor</dt><dd>${num(stats.profit_factor)}</dd>
+    <dt>average R</dt><dd class="${sign(stats.average_r)}">${num(stats.average_r)}</dd>
+    <dt>maximum drawdown</dt><dd>${money(stats.maximum_drawdown_usd)}</dd>
+    <dt>evaluation pass rate</dt><dd>${pct(stats.evaluation_pass_rate)}</dd>
+    <dt>account failure rate</dt><dd>${pct(stats.account_failure_rate)}</dd>
+    <dt>payout probability</dt><dd>${pct(stats.payout_probability)}</dd>`;
+}
+
+function renderLimits(risk) {
+  if (!risk) return;
+  const meters = [
+    ["daily loss", Math.max(0, -risk.daily_pnl), risk.daily_loss_limit, money],
+    ["trades today", risk.trades_today, risk.max_trades_per_day, (v) => v],
+    ["consecutive losses", risk.consecutive_losses, risk.max_consecutive_losses, (v) => v],
+  ];
+  const bars = meters.map(([label, used, limit, fmt]) => {
+    const frac = limit ? Math.min(1, used / limit) : 0;
+    const cls = frac >= 0.9 ? "crit" : frac >= 0.6 ? "hot" : "";
+    return `<div><div class="kv"><dt>${label}</dt><dd>${fmt(used)} / ${fmt(limit)}</dd></div>
+            <div class="bar"><i class="${cls}" style="width:${(frac * 100).toFixed(1)}%"></i></div></div>`;
+  }).join("");
+
+  const cushionCls = risk.cushion_pct < 25 ? "crit" : risk.cushion_pct < 50 ? "hot" : "";
+  $("limits").innerHTML = bars + `
+    <div style="margin-top:8px">
+      <div class="kv"><dt>drawdown cushion</dt><dd>${num(risk.cushion_pct, 0)}%</dd></div>
+      <div class="bar"><i class="${cushionCls}" style="width:${Math.max(0, Math.min(100, risk.cushion_pct))}%"></i></div>
+    </div>
+    <dl class="kv" style="margin-top:10px">
+      <dt>max contracts</dt><dd>${risk.max_contracts}</dd>
+      <dt>max risk / trade</dt><dd>${money(risk.max_risk_per_trade_usd)}</dd>
+      <dt>drawdown floor</dt><dd>${money(risk.drawdown_floor)}</dd>
+      <dt>halted</dt><dd class="${risk.halted ? "neg" : "muted"}">${esc(risk.halted ? risk.halt_reason : "no")}</dd>
+      <dt>kill switch</dt><dd class="${risk.kill_switch === "clear" ? "muted" : "neg"}">${esc(risk.kill_switch)}</dd>
+      <dt>session</dt><dd class="muted">${esc(risk.session_window)}</dd>
+    </dl>`;
+}
+
+function renderEquity(points) {
+  const svg = $("equity");
+  if (!points || points.length < 2) {
+    svg.innerHTML = `<text x="12" y="24" fill="#8b94a7" font-size="12">not enough data yet</text>`;
+    $("equity-note").textContent = "";
+    return;
+  }
+  const values = points.map((p) => p.equity);
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const span = hi - lo || 1;
+  const step = 800 / (points.length - 1);
+  const path = values.map((v, i) => `${i ? "L" : "M"}${(i * step).toFixed(2)},${(170 - ((v - lo) / span) * 160).toFixed(2)}`).join("");
+  const first = values[0], last = values[values.length - 1];
+  const stroke = last >= first ? "#4ade80" : "#f87171";
+  const baseY = (170 - ((first - lo) / span) * 160).toFixed(2);
+  svg.innerHTML =
+    `<line x1="0" y1="${baseY}" x2="800" y2="${baseY}" stroke="#262b36" stroke-dasharray="4 4"/>` +
+    `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.5"/>`;
+  $("equity-note").textContent = `${points.length} marks · ${money(lo)} low · ${money(hi)} high · now ${money(last)}`;
+}
+
+async function refresh() {
+  let data;
+  try {
+    data = await (await fetch("/api/state")).json();
+  } catch (e) {
+    $("health").textContent = "UNREACHABLE";
+    $("health").className = "badge down";
+    return;
+  }
+  const s = data.snapshot || {};
+  const h = data.health || {};
+
+  const modeLabel = s.mode || (s.paper === false ? "LIVE" : "PAPER");
+  const externalStage = Number((s.deployment || {}).stage) >= 3 || s.paper === false;
+  $("mode").textContent = modeLabel;
+  $("mode").className = "badge " + (externalStage ? "live" : "paper");
+  $("state").textContent = s.state || "—";
+  $("strategy").textContent = `${s.strategy || "—"} · ${s.instrument || "—"} · ${s.broker || "—"}`;
+  $("health").textContent = h.status || "—";
+  $("health").className = "badge " + String(h.status || "ok").toLowerCase();
+  $("served").textContent = clock(data.served_at);
+
+  renderPosition(s.position);
+  renderPropAccount(s.prop_account);
+  renderLimits(s.risk);
+  renderBot(s, s.risk || {});
+  renderStatistics(s.statistics);
+  renderEquity(data.equity);
+
+  const risk = s.risk || {};
+  $("session").innerHTML = `
+    <dt>equity</dt><dd>${money(s.equity)}</dd>
+    <dt>session P&amp;L</dt><dd class="${sign(risk.daily_pnl)}">${money(risk.daily_pnl)}</dd>
+    <dt>session R</dt><dd class="${sign(risk.daily_r)}">${num(risk.daily_r)}</dd>
+    <dt>trades</dt><dd>${s.trades ?? 0}</dd>
+    <dt>bars seen</dt><dd>${(s.bars_seen ?? 0).toLocaleString()}</dd>
+    ${(h.checks || []).map((c) => `<dt>${esc(c.name)}</dt><dd class="${c.status === "OK" ? "muted" : "neg"}">${esc(c.status)}</dd>`).join("")}`;
+
+  table($("trades"),
+    [{label: "entry"}, {label: "exit"}, {label: "side"}, {label: "qty", num: true},
+     {label: "in", num: true}, {label: "out", num: true}, {label: "reason"},
+     {label: "net", num: true}, {label: "R", num: true}],
+    data.trades || [],
+    (t) => `<tr>
+      <td class="muted">${esc(clock(t.entry_time))}</td><td class="muted">${esc(clock(t.exit_time))}</td>
+      <td class="${t.side === 1 || t.side === "BUY" ? "pos" : "neg"}">${esc(t.side === 1 ? "BUY" : t.side === -1 ? "SELL" : t.side)}</td>
+      <td class="num">${t.quantity}</td>
+      <td class="num">${num(t.entry_price)}</td><td class="num">${num(t.exit_price)}</td>
+      <td class="muted">${esc(t.exit_reason)}</td>
+      <td class="num ${sign(t.net_pnl)}">${money(t.net_pnl)}</td>
+      <td class="num ${sign(t.r_multiple)}">${num(t.r_multiple)}</td></tr>`);
+
+  table($("rejections"),
+    [{label: "count", num: true}, {label: "stage"}, {label: "reason"}],
+    data.rejections || [],
+    (r) => `<tr><td class="num">${num(r.n ?? r.count ?? 1, 0)}</td><td class="muted">${esc(r.stage)}</td><td>${esc(r.reason)}</td></tr>`);
+
+  table($("logs"),
+    [{label: "time"}, {label: "level"}, {label: "event"}, {label: "detail"}],
+    data.logs || [],
+    (l) => `<tr><td class="muted">${esc(clock(l.ts))}</td><td class="${["ERROR", "WARN", "INFO"].includes(l.level) ? l.level : ""}">${esc(l.level)}</td>
+            <td>${esc(l.kind)}</td><td class="muted">${esc(l.detail || "")}</td></tr>`);
+}
+
+async function post(path, reason) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({reason}),
+  });
+  const body = await res.json();
+  if (!body.ok) alert(body.detail || "the request was not accepted");
+  refresh();
+}
+
+$("stop").addEventListener("click", () => {
+  if (confirm("EMERGENCY STOP\n\nFlatten any open position and refuse new entries until a human clears the switch.\n\nProceed?")) {
+    post("/api/stop", "dashboard emergency stop");
+  }
+});
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

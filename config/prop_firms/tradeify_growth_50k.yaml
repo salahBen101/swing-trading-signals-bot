@@ -1,0 +1,136 @@
+schema_version: 1
+profile_id: tradeify_growth_50k_current
+firm: Tradeify
+program: Growth
+account_size_usd: 50000
+purchase_cohort: purchased_on_or_after_2025-09-12T08:00:00_ET
+verified_on: 2026-08-22
+reverify_after_hours: 24
+
+sources:
+  - title: Growth Evaluation Accounts
+    url: https://help.tradeify.co/en/articles/10495915-growth-evaluation-accounts
+    checked_on: 2026-08-22
+  - title: Growth Funded Account Payout Policy
+    url: https://help.tradeify.co/en/articles/11083796-growth-funded-account-payout-policy
+    checked_on: 2026-08-22
+  - title: Rules — Trailing Max Drawdowns
+    url: https://help.tradeify.co/en/articles/10495897-rules-trailing-max-drawdowns
+    checked_on: 2026-08-22
+  - title: Rules — Daily Loss Limit
+    url: https://help.tradeify.co/en/articles/10468321-rules-daily-loss-limit
+    checked_on: 2026-08-22
+  - title: Rules — Permitted Times to Trade
+    url: https://help.tradeify.co/en/articles/10495876-rules-permitted-times-to-trade
+    checked_on: 2026-08-22
+  - title: Guidelines for Traders
+    url: https://help.tradeify.co/en/articles/10468318-guidelines-for-traders
+    checked_on: 2026-08-22
+  - title: Rules — Hedging and Correlated Products
+    url: https://help.tradeify.co/en/articles/10495868-rules-hedging-correlated-products
+    checked_on: 2026-08-22
+  - title: Rules — Supported Trading Products and Assets
+    url: https://help.tradeify.co/en/articles/10468222-rules-supported-trading-products-assets
+    checked_on: 2026-08-22
+  - title: Rules — News Trading
+    url: https://help.tradeify.co/en/articles/10495874-rules-news-trading
+    checked_on: 2026-08-22
+
+trading_window:
+  timezone: America/New_York
+  session_start: "18:00"
+  session_end: "17:00"
+  flatten_by: "16:45"
+  holiday_flatten_by: "12:59"
+
+compliance:
+  automation_allowed: true
+  bot_owner_must_prove_sole_ownership: true
+  bot_exclusive_to_firm: true
+  high_frequency_bots_allowed: false
+  hedging_allowed: false
+  news_trading_allowed: true
+  averaging_down_firm_allowed: true
+  tradovate_api_allowed: false
+  bot_cross_firm_deployment_allowed: false
+  proof_video_may_be_required: true
+  platform_error_exploitation_allowed: false
+  cross_account_hedging_allowed: false
+  minimum_hold_seconds_for_payout: 10
+  min_fraction_trades_over_hold: 0.50
+  min_fraction_profit_over_hold: 0.50
+  minimum_trades_per_week: 1
+
+phases:
+  evaluation:
+    phase: evaluation
+    starting_balance_usd: 50000
+    profit_target_usd: 3000
+    minimum_trading_days: 1
+    daily_loss_limit_usd: 1250
+    daily_loss_breach_kind: soft
+    drawdown:
+      amount_usd: 2000
+      method: end_of_day_trailing
+      breach_kind: hard
+      enforced_intraday: true
+      breach_at_or_below: true
+      high_water_mark_basis: highest_end_of_day_balance
+      breach_basis: real_time_net_liquidation
+      locks: false
+    contracts:
+      max_minis: 4
+      max_micros: 40
+      micro_per_mini: 10
+      mixed_sizes_allowed: true
+      aggregate_gross_open_position: true
+    consistency: {}
+    payout: {}
+
+  sim_funded:
+    phase: sim_funded
+    starting_balance_usd: 50000
+    profit_target_usd: null
+    minimum_trading_days: 0
+    daily_loss_limit_usd: 1250
+    daily_loss_breach_kind: soft
+    daily_loss_escalation_balance_usd: 53000
+    daily_loss_escalated_limit_usd: 2000
+    drawdown:
+      amount_usd: 2000
+      method: end_of_day_trailing
+      breach_kind: hard
+      enforced_intraday: true
+      breach_at_or_below: true
+      high_water_mark_basis: highest_end_of_day_balance
+      breach_basis: real_time_net_liquidation
+      locks: true
+      lock_trigger_balance_usd: 52100
+      locked_floor_balance_usd: 50100
+    contracts:
+      max_minis: 4
+      max_micros: 40
+      micro_per_mini: 10
+      mixed_sizes_allowed: true
+      aggregate_gross_open_position: true
+    consistency:
+      max_best_day_fraction: 0.35
+      applies_to: [payout]
+      resets_after_payout: true
+      profit_excludes_commissions: true
+    payout:
+      eligible: true
+      profit_split_trader: 0.90
+      minimum_balance_usd: 53000
+      minimum_payout_usd: 500
+      winning_days_required: 5
+      winning_day_min_profit_usd: 150
+      winning_day_strictly_greater: true
+      max_payout_by_request_usd: [1500, 2000, 2500, 3000]
+
+ambiguity_notes:
+  - The dedicated July 2026 permitted-times rule says 16:45 ET while a general FAQ says 16:59 ET; this profile enforces the safer 16:45 deadline.
+  - Firm permission for DCA does not relax this system's stricter personal ban on averaging down.
+  - Official documentation does not fully define DLL unrealized-PnL treatment or persistence of the 6% escalation after payout; broker/dashboard state must be authoritative and Stage 3 remains blocked pending written confirmation.
+  - Tradovate API access is unavailable for Evaluation and Sim Funded accounts; no automated Stage 3 route is assumed.
+  - A general pricing overview conflicts with the dedicated Growth Evaluation page about consistency; the dedicated evaluation and consistency/payout pages are used stage by stage.

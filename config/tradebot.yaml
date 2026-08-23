@@ -1,0 +1,106 @@
+# Configuration for the MNQ intraday futures system (src/tradebot).
+#
+# Every value here is enforced in code, not advisory. Unknown keys are a load error on
+# purpose: a typo in a risk limit must not silently leave the default in place.
+#
+# Any scalar can be overridden from the environment, e.g.
+#   TRADEBOT__RISK__DAILY__MAX_DAILY_LOSS_USD=500
+#
+# The separate config/strategy.yaml and config/risk.yaml belong to the retired
+# src/nq_scalper package and are not read by this system.
+
+mode: BACKTEST # Stage 0. LIVE is refused; Stage 3/4 need a separate human manifest.
+instrument: MNQ
+timeframe: 1min
+
+deployment:
+  stage: 0 # 0 backtest | 1 replay | 2 paper. 3/4 are refused by ordinary config.
+  approval_manifest: ""
+
+prop_firm:
+  profile_path: config/prop_firms/tradeify_growth_50k.yaml
+  phase: evaluation
+  internal_safety_buffer_usd: 400.0
+  # Reviewed official-page fingerprints. A missing/changed/unavailable source fails closed
+  # and can only create an unapproved proposal; it cannot rewrite this profile.
+  source_snapshot_path: config/prop_firms/source_snapshots.yaml
+
+session:
+  timezone: US/Eastern
+  rth_start: "09:30"
+  rth_end: "16:00"
+  # The opening auction is where level-based rules are least reliable and slippage is
+  # worst; the last 15 minutes cannot fit a trade before the forced flatten.
+  entry_open_buffer_minutes: 5
+  entry_close_buffer_minutes: 15
+  flatten_before_close_minutes: 2
+  # Each entry: {start: "2026-08-05T14:30:00-04:00", end: "2026-08-05T14:45:00-04:00"}.
+  # Empty by default - no news-calendar feed is wired up (see docs/LIMITATIONS.md).
+  news_blackout_windows: []
+
+risk:
+  starting_equity_usd: 50000.0
+  max_open_positions: 1
+  token_ttl_seconds: 60.0
+
+  per_trade:
+    risk_pct_of_equity: 0.375
+    max_risk_per_trade_usd: 200.0
+    max_contracts: 3
+    min_contracts: 1
+
+  daily:
+    max_daily_loss_usd: 200.0
+    max_daily_loss_r: 4.0
+    max_trades_per_day: 1
+
+  streaks:
+    max_consecutive_losses: 3
+    cooldown_minutes: 20
+
+  drawdown:
+    # Research-only legacy circuit breaker. This is NOT the Tradeify drawdown rule; the
+    # selected prop profile models the exact $2,000 EOD trail and $400 internal buffer.
+    trailing_drawdown_pct: 5.0
+    size_reduction_cushion_pct: 40.0
+
+  kill_switch:
+    flag_file: logs/KILL_SWITCH.flag
+    max_consecutive_errors: 5
+
+costs:
+  # All-in round turn per MNQ contract at a typical retail futures broker.
+  commission_round_trip_usd: 1.24
+  slippage_ticks_per_side: 1.0
+  slippage_stress_multiplier: 2.0
+
+data:
+  store_dir: data_cache
+  stale_bar_multiple: 3.0
+  hard_stale_bar_multiple: 10.0
+
+broker:
+  adapter: simulated # simulated | tradovate
+  environment: demo # demo | live - live raises LiveTradingDisabled
+  account_id: ""
+  symbol_override: "" # e.g. MNQZ6, when the broker wants an explicit contract month
+  request_timeout_seconds: 15.0
+  max_retries: 3
+  simulated:
+    latency_ms: 120.0
+    reject_probability: 0.0
+    partial_fill_probability: 0.0
+    disconnect_probability: 0.0
+    seed: 7
+
+journal:
+  path: logs/tradebot.sqlite3
+  log_every_bar: false
+
+dashboard:
+  host: 127.0.0.1 # loopback only - there is no authentication in front of the STOP button
+  port: 8787
+
+strategy:
+  name: orb_breakout
+  params: {}
