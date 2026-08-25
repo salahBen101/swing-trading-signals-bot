@@ -326,3 +326,47 @@ in rough order of promise:
 3. **Accepting the negative** and redirecting the engineering — which is sound and
    well-tested — toward a strategy that has independent evidence, rather than continuing to
    search where 30 families have already failed.
+
+---
+
+## 12. Amendment 1 (2026-08-22): dynamic exits, volume profile, order flow
+
+Prompted by a proposal to add bid/ask and volume-profile *confirmations* and to make exits
+dynamic — cut losers early, trail winners (dynamic TP/SL). Recorded as an amendment because
+§1 fixes the hypothesis list; this adds to the search count (now 33: 30 + these 3).
+
+### Data constraint on bid/ask — untestable, not merely untested
+
+The archive is OHLCV. There is **no quote/BBO data** over the research period. The only
+order-flow data (`nq_orderflow_15s.parquet`, aggressor-side ticks) spans 2025-07 → 2026-02,
+which is **entirely inside the HOLDOUT**, and is a trade-imbalance *proxy*, not true bid/ask.
+A bid/ask confirmation therefore cannot be tested on DEV or validation at all, and testing it
+would require spending the holdout — forbidden. Prior work (commit `c31f19e`) already tested
+tick order flow and found no edge. **Bid/ask is not evaluated; the data does not exist where
+the discipline allows it to be used.**
+
+### The controlling theory
+
+For a zero-edge (random-walk) entry, no exit rule produces positive net expectancy: a
+trailing stop changes the *shape* of the win/loss distribution but not its mean, and costs
+make the mean negative. So a dynamic exit can only add value where the entry carries
+directional *persistence*. Every dynamic-exit result is therefore read against a
+**null control**: the identical exit applied to random entries.
+
+### Result — rejected
+
+| test | finding |
+|---|---|
+| null control (DEV) | random entries + dynamic exit: mean net **−0.90 pt**, 95th pctile +1.41, best-of-40 +2.83 |
+| null control (validation) | mean net −1.07 pt, 95th pctile +2.21 |
+| momentum entries + dynamic exit (DEV) | A1, C1, D1, D2, D3 all **inside the null band** — indistinguishable from random entries with a good exit |
+| A4 + dynamic exit | DEV net +1.87 (barely over null 95th), but **2022 = 142% of net, short-only**; validation **−3.47** |
+| volume-profile confirmation | **degrades every entry** (C1 +0.40→−0.01, D1 +0.13→−1.80, A4 +1.87→−2.98) |
+
+The dynamic exit has no intrinsic power (the null centres negative), and no entry's edge
+survives being measured against it. Volume-profile confirmation, far from adding value,
+removes exactly the trades that made A4 look good — proving there is no acceptance/
+continuation structure, only 2022 falling. This is the theory's prediction, confirmed: you
+cannot exit your way out of an entry that carries no signal.
+
+Holdout still untouched. Reproduce with `scripts/research_dynamic.py`.

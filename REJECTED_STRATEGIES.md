@@ -140,3 +140,39 @@ Thirty intraday NQ/MNQ families across all work in this repository; none survive
 out-of-sample. The consistent, well-replicated finding is that liquid index-future intraday
 returns at the 5-to-20-minute horizon are, for the rule families a retail participant can
 express, indistinguishable from a random walk once the 1.12-point round-trip cost is paid.
+
+---
+
+## Amendment 1 — dynamic exits, volume profile, order flow (2026-08-22)
+
+Proposal: add bid/ask and volume-profile confirmations, and dynamic exits (cut losers early,
+trail winners). All rejected. Full context in `RESEARCH_PLAN.md` §12; reproduce with
+`scripts/research_dynamic.py`.
+
+### Bid/ask order-flow confirmation · UNTESTABLE
+No quote/BBO data exists over the research period. The only order-flow data
+(`nq_orderflow_15s.parquet`) is a trade-imbalance proxy confined to 2025-07 → 2026-02 —
+entirely inside the holdout. It cannot be tested on DEV/validation, and spending the holdout
+is forbidden. Prior tick-order-flow research (commit `c31f19e`) already found no edge. Not
+evaluated: the data does not exist where it could legitimately be used.
+
+### Dynamic exits (trail winners / cut losers) · NO-EDGE-TO-EXIT
+The null control is the verdict: the identical dynamic exit applied to *random* entries
+averages −0.90 pt net on DEV and −1.07 pt on validation, with a 95th percentile of +1.4 to
++2.2 pt purely from luck. Applied to the momentum entries, A1/C1/D1/D2/D3 all land inside
+that null band — the exit made them indistinguishable from random entries. This is the
+theoretical result that a trailing stop cannot create expectancy where the entry has no
+directional persistence; the entries do not, so it does not. A4 nominally beat the null 95th
+(+1.87) but was more concentrated than ever (2022 = 142% of net, short-only) and inverted to
+−3.47 on validation.
+
+### Volume-profile confirmation · DEGRADES EVERY ENTRY
+Requiring price to have left the developing value area (an acceptance/continuation filter)
+made every tested entry worse: C1 +0.40→−0.01, D1 +0.13→−1.80, A4 +1.87→−2.98. A real
+continuation edge would be *sharpened* by this filter. That it is dulled — and that it strips
+out precisely the A4 trades that looked good — confirms there is no acceptance structure to
+confirm, only the 2022 downtrend.
+
+**Lesson.** Exit engineering and confirmation filters cannot rescue an entry with no gross
+signal. The null control should be the first test of any future exit idea: if it lifts random
+entries, it is a mirage.
