@@ -1,0 +1,87 @@
+<!doctype html><meta charset='utf-8'><title>RSI(2) Paper Account</title>
+<style>
+:root{--bg:#faf9f7;--fg:#1c1b1a;--mut:#6b6864;--line:#e3e0dc;--card:#fff;
+ --pos:#0a7a45;--neg:#c0392b;--accent:#2d5f8a}
+@media(prefers-color-scheme:dark){:root{--bg:#16150f;--fg:#eceae5;--mut:#9a958d;
+ --line:#33312c;--card:#1e1d18;--pos:#4ade80;--neg:#f87171;--accent:#7cb3e0}}
+*{box-sizing:border-box}
+body{margin:0;padding:26px;background:var(--bg);color:var(--fg);
+ font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;max-width:1120px}
+h1{font-size:24px;margin:0 0 4px}
+h2{font-size:14px;margin:30px 0 10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}
+.sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:20px 24px;margin-bottom:12px}
+.big{font-size:44px;font-weight:650;letter-spacing:-.02em;line-height:1.1}
+.grid{display:flex;flex-wrap:wrap;gap:24px;margin-top:14px}
+.grid div{font-size:12.5px;color:var(--mut)}
+.grid b{display:block;font-size:19px;color:var(--fg);font-weight:600;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;
+ letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.pos{color:var(--pos);font-weight:600}.neg{color:var(--neg);font-weight:600}.flat{color:var(--mut)}
+.note{background:var(--card);border-left:3px solid var(--accent);padding:12px 16px;
+ border-radius:0 7px 7px 0;color:var(--mut);font-size:13px;margin:12px 0}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:4px 8px}
+.empty{color:var(--mut);font-style:italic;padding:12px 4px}
+</style>
+<h1>RSI(2) Scanner &mdash; Paper Account</h1>
+<div class='sub'>Live since <b>2026-08-15</b> &middot; updated 2026-08-27 16:28 ET &middot; universe <b>strong</b> &middot; max 10 positions at 12% of equity each</div>
+<div class='card'>
+<div class='big pos'>$52,307.00</div>
+<div class='grid'>
+<div>started<b>$50,000</b></div>
+<div>return<b class='pos'>+4.61%</b></div>
+<div>cash<b>$51,425</b></div>
+<div>realised<b class='pos'>$+2,775</b></div>
+<div>unrealised<b class='neg'>$-468</b></div>
+<div>positions<b>10 closed / 2 open</b></div>
+<div>win rate<b>70%</b></div>
+<div>profit factor<b>2.06</b></div>
+<div>avg hold<b>4.6d</b></div>
+</div></div>
+<h2>Equity curve</h2>
+<div class='card'><svg viewBox='0 0 1040 240' style='width:100%;height:auto'><line x1='40' y1='200.0' x2='1028' y2='200.0' stroke='var(--line)' stroke-dasharray='2,4'/><text x='4' y='204.0' font-size='10' fill='var(--mut)'>$45.9k</text><line x1='40' y1='120.0' x2='1028' y2='120.0' stroke='var(--line)' stroke-dasharray='2,4'/><text x='4' y='124.0' font-size='10' fill='var(--mut)'>$49.1k</text><line x1='40' y1='40.0' x2='1028' y2='40.0' stroke='var(--line)' stroke-dasharray='2,4'/><text x='4' y='44.0' font-size='10' fill='var(--mut)'>$52.3k</text><polygon points='40.0,200.0 40.0,128.6 369.3,169.0 698.7,200.0 1028.0,40.0 1028.0,200.0' fill='var(--pos)' opacity='.10'/><line x1='40' y1='97.3' x2='1028' y2='97.3' stroke='var(--mut)' stroke-dasharray='5,5'/><text x='944' y='92.3' font-size='10' fill='var(--mut)'>start $50k</text><polyline points='40.0,128.6 369.3,169.0 698.7,200.0 1028.0,40.0' fill='none' stroke='var(--pos)' stroke-width='2.2'/><text x='40' y='230' font-size='10' fill='var(--mut)'>2026-08-19</text><text x='964' y='230' font-size='10' fill='var(--mut)'>2026-08-27</text></svg></div>
+<h2>Go / no-go for real money</h2>
+<div class='card'>
+<div style='font-size:26px;font-weight:650' class='flat'>COLLECTING</div>
+<div style='margin-top:8px;color:var(--mut);font-size:13.5px'>10/96 trades. Nothing is decided yet - at this sample even a strong-looking number is inside the range of luck.</div>
+<div style='margin-top:14px;height:7px;background:var(--line);border-radius:4px'><div style='width:10%;height:7px;background:var(--accent);border-radius:4px'></div></div><div style='color:var(--mut);font-size:11.5px;margin-top:5px'>10 of 96 trades needed &middot; current t = 1.38 &middot; bar is t &gt; 2.0</div>
+</div>
+<div class='note'>The decision is made on the <b>share-equivalent</b> return of each signal, never on the option P&amp;L. Options carry 7.4x leverage on both the edge and the noise while the spread subtracts a fixed cost, so their signal-to-noise ratio is 0.022 against 0.204 for shares &mdash; <b>8,635 option trades (66 years) versus 96 share trades (~8 months)</b> to reach the same confidence. A profitable option year proves nothing: with a <b>zero</b> edge, one year still ends above $20,000 about 37% of the time and reaches $49,659 at the 95th percentile.</div>
+<div class='note'><b>Learning layer:</b> dormant - 1/40 closed trades. It will not score anything until it has a real sample.</div>
+<div class='note'>Buys fill at the <b>ask</b>, sells at the <b>bid</b> &mdash; real contracts, real quotes. Paper only; no orders are ever sent. The validated edge (+0.509%/trade, t=8.70 on a 7-year holdout) is a <b>share</b> return; this measures what survives the options wrapper on a real-sized account.</div>
+<h2>Open positions</h2>
+<div class='wrap'><table><tr><th>Ticker</th><th>Contract</th><th>Opened</th><th class='num'>Qty</th><th class='num'>Days</th><th class='num'>Cost</th><th class='num'>Value</th><th class='num'>Spot %</th><th class='num'>P&amp;L $</th><th class='num'>P&amp;L %</th></tr>
+<tr><td><b>KRE</b></td><td>72C 2026-09-18</td><td>2026-08-19</td><td class='num'>1</td><td class='num'>6</td><td class='num'>$425</td><td class='num'>$324</td><td class='num neg'>-1.02%</td><td class='num neg'>$-100</td><td class='num neg'>-23.6%</td></tr>
+<tr><td><b>XLI</b></td><td>175C 2026-09-18</td><td>2026-08-19</td><td class='num'>1</td><td class='num'>6</td><td class='num'>$925</td><td class='num'>$558</td><td class='num neg'>-1.82%</td><td class='num neg'>$-368</td><td class='num neg'>-39.7%</td></tr>
+</table></div>
+<h2>All closed trades (10)</h2>
+<div class='wrap'><table><tr><th>Ticker</th><th>Sector</th><th>Contract</th><th>In</th><th>Out</th><th class='num'>Days</th><th class='num'>Qty</th><th class='num'>Cost</th><th class='num'>P&amp;L $</th><th class='num'>%</th><th>Exit</th></tr>
+<tr><td><b>AVGO</b></td><td>tech</td><td>370C 2026-09-18</td><td>2026-08-14</td><td>2026-08-27</td><td class='num'>9</td><td class='num'>1</td><td class='num'>$3,755</td><td class='num neg'>$-1,775</td><td class='num neg'>-47.3%</td><td>RSI(2) 85.7 > 65</td></tr>
+<tr><td><b>PANW</b></td><td>tech</td><td>350C 2026-09-18</td><td>2026-08-19</td><td>2026-08-27</td><td class='num'>6</td><td class='num'>1</td><td class='num'>$2,845</td><td class='num pos'>$+1,460</td><td class='num pos'>+51.3%</td><td>RSI(2) 90.7 > 65</td></tr>
+<tr><td><b>C</b></td><td>financials</td><td>130C 2026-09-18</td><td>2026-08-19</td><td>2026-08-27</td><td class='num'>6</td><td class='num'>1</td><td class='num'>$650</td><td class='num neg'>$-150</td><td class='num neg'>-23.1%</td><td>close > 5-day SMA</td></tr>
+<tr><td><b>MDY</b></td><td>broad mkt</td><td>675C 2026-09-18</td><td>2026-08-20</td><td>2026-08-27</td><td class='num'>5</td><td class='num'>1</td><td class='num'>$3,050</td><td class='num neg'>$-700</td><td class='num neg'>-23.0%</td><td>RSI(2) 71.0 > 65</td></tr>
+<tr><td><b>QQQ</b></td><td>broad mkt</td><td>690C 2026-09-18</td><td>2026-08-20</td><td>2026-08-27</td><td class='num'>5</td><td class='num'>1</td><td class='num'>$3,155</td><td class='num pos'>$+355</td><td class='num pos'>+11.3%</td><td>RSI(2) 90.6 > 65</td></tr>
+<tr><td><b>NVDA</b></td><td>tech</td><td>205C 2026-09-25</td><td>2026-08-20</td><td>2026-08-27</td><td class='num'>5</td><td class='num'>3</td><td class='num'>$5,535</td><td class='num pos'>$+1,890</td><td class='num pos'>+34.1%</td><td>RSI(2) 87.8 > 65</td></tr>
+<tr><td><b>MS</b></td><td>financials</td><td>200C 2026-09-18</td><td>2026-08-20</td><td>2026-08-24</td><td class='num'>2</td><td class='num'>4</td><td class='num'>$4,940</td><td class='num pos'>$+1,140</td><td class='num pos'>+23.1%</td><td>close > 5-day SMA</td></tr>
+<tr><td><b>AMZN</b></td><td>tech</td><td>255C 2026-08-28</td><td>2026-08-17</td><td>2026-08-19</td><td class='num'>3</td><td class='num'>1</td><td class='num'>$915</td><td class='num pos'>$+85</td><td class='num pos'>+9.3%</td><td>RSI(2) 72.0 > 65</td></tr>
+<tr><td><b>BRK-B</b></td><td>financials</td><td>465C 2026-09-18</td><td>2026-08-17</td><td>2026-08-19</td><td class='num'>3</td><td class='num'>1</td><td class='num'>$3,735</td><td class='num pos'>$+345</td><td class='num pos'>+9.2%</td><td>RSI(2) 66.8 > 65</td></tr>
+<tr><td><b>DIA</b></td><td>broad mkt</td><td>528C 2026-08-28</td><td>2026-08-18</td><td>2026-08-19</td><td class='num'>2</td><td class='num'>1</td><td class='num'>$785</td><td class='num pos'>$+125</td><td class='num pos'>+15.9%</td><td>RSI(2) 71.4 > 65</td></tr>
+</table></div>
+<h2>Signals missed (3)</h2>
+<div class='note'>A $20k account cannot take every signal. These are the ones it had to pass on &mdash; and they cluster on broad selloff days, which is exactly when the setup fires most.</div>
+<div class='wrap'><table><tr><th>Date</th><th>Ticker</th><th>Reason</th></tr>
+<tr><td>2026-08-24</td><td><b>SMH</b></td><td>no contract in budget</td></tr>
+<tr><td>2026-08-24</td><td><b>XLK</b></td><td>no contract in budget</td></tr>
+<tr><td>2026-08-24</td><td><b>TXN</b></td><td>no contract in budget</td></tr>
+</table></div>
+<h2>Daily equity</h2>
+<div class='wrap'><table><tr><th>Date</th><th class='num'>Equity</th><th class='num'>Change</th><th class='num'>Cash</th><th class='num'>Realised</th><th class='num'>Open</th></tr>
+<tr><td>2026-08-27</td><td class='num'>$52,307.00</td><td class='num pos'>$+6,440.00</td><td class='num'>$51,425</td><td class='num pos'>$+2,775</td><td class='num'>2</td></tr>
+<tr><td>2026-08-24</td><td class='num'>$45,867.00</td><td class='num neg'>$-1,249.00</td><td class='num'>$31,355</td><td class='num pos'>$+1,695</td><td class='num'>8</td></tr>
+<tr><td>2026-08-20</td><td class='num'>$47,116.00</td><td class='num neg'>$-1,624.00</td><td class='num'>$25,275</td><td class='num pos'>$+555</td><td class='num'>9</td></tr>
+<tr><td>2026-08-19</td><td class='num'>$48,740.00</td><td class='num neg'>$-1,260.00</td><td class='num'>$41,955</td><td class='num pos'>$+555</td><td class='num'>5</td></tr>
+</table></div>
