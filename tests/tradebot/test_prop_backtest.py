@@ -56,11 +56,16 @@ class DailySignalStrategy(Strategy):
         if ctx.timestamp.time() != time(10, 0):
             return None
         close = float(ctx.bar["close"])
+        # The production entry envelope permits four MNQ ticks (one point) of
+        # adverse movement.  Keep this fixture at exactly 2R at that executable
+        # bound, rather than only at the signal bar's close.
+        executable_entry = close + 1.0
         return self._make_intent(
             ctx,
             Side.BUY,
             close - self.stop_points,
-            target_price=close + 2 * self.stop_points,
+            target_price=executable_entry
+            + 2 * (executable_entry - (close - self.stop_points)),
             conditions=("daily_test_signal",),
         )
 
@@ -75,9 +80,9 @@ def _bars(*, days: int = 1) -> pd.DataFrame:
             pd.DataFrame(
                 {
                     "open": [100.0, 100.0, 102.0],
-                    "high": [100.25, 103.0, 102.25],
+                    "high": [100.25, 103.0, 105.25],
                     "low": [99.75, 99.5, 101.75],
-                    "close": [100.0, 102.0, 102.0],
+                    "close": [100.0, 102.0, 105.0],
                     "volume": [100.0, 100.0, 100.0],
                 },
                 index=index,
@@ -203,12 +208,30 @@ def test_personal_valid_entry_is_refused_by_internal_prop_floor_buffer() -> None
 
 
 def test_personal_valid_entry_is_refused_by_selected_profile_contract_cap() -> None:
-    result = _run(config=_config(personal_max_contracts=50))
+    config = _config(personal_max_contracts=50)
+    # Eliminate the optional entry- and stop-gap reserves only in this targeted
+    # synthetic fixture so the all-in personal size is above Growth's 40-micro cap
+    # while remaining at or below the system's $200 maximum risk. Production keeps
+    # both reserves; fees and stressed exit slippage still count here.
+    config = replace(
+        config,
+        risk=replace(
+            config.risk,
+            per_trade=replace(
+                config.risk.per_trade,
+                risk_pct_of_equity=0.5,
+                max_entry_gap_ticks=0.0,
+                max_stop_gap_ticks=0.0,
+            ),
+        ),
+    )
+    result = _run(config=config)
 
     assert result.trades == []
     decision = _entry_evaluations(result)[0]
     assert decision["personal"]["allowed"]
-    assert decision["personal"]["contracts"] == 50
+    assert 40 < decision["personal"]["contracts"] <= 50
+    assert decision["personal"]["risk_usd"] <= 200.0
     assert "contract_limit" in decision["prop_firm"]["reason_codes"]
 
 

@@ -57,6 +57,7 @@ from ..core.types import (
 from ..instruments.registry import InstrumentSpec
 from ..journal.db import Journal
 from ..risk.limits import RiskEngine
+from ..risk.reservations import PendingEntryState
 from ..strategy.base import ExitDecision, Strategy, StrategyContext, StopUpdate
 
 
@@ -115,6 +116,15 @@ class ExecutionEngine:
         self.rejections: list[Rejection] = []
         self._orders: dict[str, Order] = {}
         self._broker_ids: dict[str, str] = {}  # order_id -> broker_order_id
+        # Broker reconnect/replay can redeliver an event. Fill economics are applied once
+        # by immutable fill id even when a terminal CANCELLED/REJECTED event carries the
+        # same late fill again.
+        self._seen_fill_ids: set[str] = set()
+        # A restart recovery flatten is deliberately not attached to a fabricated local
+        # Position.  Track its exact order ids separately so fill events can be journalled
+        # and followed by an authoritative flat check without manufacturing trade P&L or
+        # strategy provenance.
+        self._recovery_flatten_order_ids: set[str] = set()
         # Intents are kept until their entry fills, because the stop and target levels live
         # on the intent and the protective orders are only placed once the fill price is
         # known. Cleared on fill so a long run does not accumulate them.
@@ -132,6 +142,22 @@ class ExecutionEngine:
 
         if self.log_every_bar and self.journal is not None:
             self.journal.record_bar(bar, self.instrument.symbol, features.to_dict())
+
+        # A latched emergency stop is authority before matching, not merely a reason to
+        # flatten exposure after the venue has had another chance to add it. Cancel any
+        # accepted entry remainder first and drain a synchronous terminal response before
+        # handing this bar to the matcher. An asynchronous venue may still report a race
+        # fill; that fill is applied below, protected, and then included in the flatten.
+        if self.risk.kill_switch.is_active():
+            self._cancel_pending_entry(
+                bar.timestamp,
+                detail="kill switch active before market matching",
+            )
+            self._drain_broker_events_fail_safe(bar.timestamp)
+            self._resolve_guarded_entry_before_flat(
+                bar.timestamp,
+                detail="kill switch pre-match entry recovery",
+            )
 
         # 1-2. Fill market orders at the open, apply those fills (which attaches a new
         # protective bracket), then match stops/limits against the remainder of the same
@@ -247,15 +273,37 @@ class ExecutionEngine:
 
     def _apply_events(self, events: list[BrokerEvent]) -> None:
         for event in events:
-            if event.kind in (EventKind.FILL, EventKind.PARTIAL_FILL) and event.fill:
+            if event.fill is not None and event.fill.fill_id not in self._seen_fill_ids:
+                self._seen_fill_ids.add(event.fill.fill_id)
                 self._on_fill(event.fill)
-            elif event.kind is EventKind.REJECTED:
-                self.state.entry_order = None
-                self._event(event.timestamp, "ORDER_REJECTED", event.detail, level="WARN")
+
+            if event.kind in (EventKind.FILL, EventKind.PARTIAL_FILL):
+                continue
+            if event.kind is EventKind.REJECTED:
+                self._on_rejected(event)
             elif event.kind is EventKind.CANCELLED:
                 self._on_cancelled(event)
             elif event.kind is EventKind.DISCONNECTED:
                 self._event(event.timestamp, "DISCONNECTED", event.detail, level="ERROR")
+
+    def _on_rejected(self, event: BrokerEvent) -> None:
+        order = self._orders.get(event.order_id)
+        if order is not None:
+            self._update_order(
+                order,
+                OrderStatus.REJECTED,
+                event.timestamp,
+                detail=event.detail,
+            )
+        if (
+            self.state.entry_order is not None
+            and self.state.entry_order.order_id == event.order_id
+        ):
+            entry = self.state.entry_order
+            self.state.entry_order = None
+            if entry.intent_id:
+                self._intents.pop(entry.intent_id, None)
+        self._event(event.timestamp, "ORDER_REJECTED", event.detail, level="WARN")
 
     def _on_fill(self, fill: Fill) -> None:
         if self.journal is not None:
@@ -263,12 +311,35 @@ class ExecutionEngine:
 
         order = self._orders.get(fill.order_id)
         if order is None:
-            # A fill for an order this process did not place. That is a reconciliation
-            # problem, not something to trade around, so it is recorded loudly and the
-            # position is left to `reconcile()`.
-            self._event(fill.timestamp, "ORPHAN_FILL",
-                        f"fill {fill.fill_id} references unknown order {fill.order_id}",
-                        level="ERROR")
+            # A valid fill can belong to an entry restored from the durable guard ledger
+            # even though this fresh ExecutionEngine has no process-local Order object.
+            # Never invent a Position/Trade from incomplete provenance, but do not merely
+            # log it and leave the account exposed either: latch STOP and close the exact
+            # broker-reported quantity through the recovery-only guard path.
+            self.risk.kill_switch.trip(
+                "broker fill arrived without local execution provenance"
+            )
+            self.state.bot_state = BotState.KILLED
+            self._event(
+                fill.timestamp,
+                "UNTRACKED_BROKER_FILL",
+                f"fill {fill.fill_id} references unknown order {fill.order_id}; "
+                "broker-authoritative recovery required",
+                level="ERROR",
+            )
+            if fill.instrument == self.instrument.symbol:
+                self._submit_recovery_flatten(
+                    fill.timestamp,
+                    "valid fill for an order restored outside local execution state",
+                )
+            else:
+                self._event(
+                    fill.timestamp,
+                    "RECOVERY_FLATTEN_REFUSED",
+                    f"untracked fill instrument {fill.instrument!r} is not configured "
+                    f"instrument {self.instrument.symbol!r}",
+                    level="ERROR",
+                )
             return
 
         prior_filled = order.filled_quantity
@@ -286,8 +357,24 @@ class ExecutionEngine:
         if order.purpose is OrderPurpose.ENTRY:
             self.state.entry_order = updated
             self._on_entry_fill(updated, fill)
+        elif order.order_id in self._recovery_flatten_order_ids:
+            self._on_recovery_flatten_fill(updated, fill)
         else:
             self._on_exit_fill(updated, fill)
+
+    def _on_recovery_flatten_fill(self, order: Order, fill: Fill) -> None:
+        """Observe a broker-truth close without inventing a local round trip."""
+
+        self._event(
+            fill.timestamp,
+            "RECOVERY_FLATTEN_FILL",
+            f"{fill.quantity} @ {fill.price} for broker recovery order {order.order_id}",
+            level="WARN",
+        )
+        # A reduce-only venue may report a partial child that nevertheless reaches flat
+        # after the authoritative position changed.  Confirm after every recovery fill,
+        # not merely after the locally reported terminal status.
+        self._confirm_recovery_flat(fill.timestamp)
 
     def _on_entry_fill(self, order: Order, fill: Fill) -> None:
         # Commission is cash leaving the account at the fill, not at some later close.
@@ -333,6 +420,10 @@ class ExecutionEngine:
             position.risk_per_contract_points = abs(
                 position.entry_price - position.initial_stop
             )
+            # Revalidate the complete cumulative position on every partial fill. A later
+            # broker fill correction or out-of-limit fill must not evade the all-in risk
+            # envelope merely because the first child fill was valid.
+            self.risk.on_position_opened(position)
             self._resize_protection(position, fill.timestamp)
 
         if order.status is OrderStatus.FILLED:
@@ -373,9 +464,6 @@ class ExecutionEngine:
         if self.state.entry_order is not None:
             pending_entry = self.state.entry_order
             self._cancel(pending_entry, fill.timestamp)
-            self.state.entry_order = None
-            if pending_entry.intent_id:
-                self._intents.pop(pending_entry.intent_id, None)
 
         remaining = position.quantity - fill.quantity
         if remaining > 0:
@@ -436,12 +524,51 @@ class ExecutionEngine:
 
         self._cancel_protection(fill.timestamp)
         self.risk.on_trade_closed(trade)
+        self._reconcile_after_trade_close(fill.timestamp)
         self.strategy.on_trade_closed(trade)
 
         if self.journal is not None:
             self.journal.record_trade(trade)
         self._event(fill.timestamp, "TRADE_CLOSED",
                     f"{reason.value} {trade.net_pnl_usd:+.2f} USD ({trade.r_multiple:+.2f}R)")
+
+    def _reconcile_after_trade_close(self, timestamp: datetime) -> None:
+        """Refresh durable equity from the venue after terminal exposure is flat."""
+
+        try:
+            rejection = self.broker.reconcile_risk_state(now=timestamp)
+        except Exception as exc:
+            # The fill and local Trade are already economic facts. Do not unwind their
+            # bookkeeping, but prevent another entry after an unclassified recovery
+            # failure and leave an explicit audit event.
+            try:
+                self.risk.kill_switch.trip(
+                    "post-close authoritative broker reconciliation raised"
+                )
+            except Exception:
+                pass
+            self._event(
+                timestamp,
+                "POST_CLOSE_RECONCILE_FAILED",
+                f"{type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return
+        if rejection is None:
+            return
+        self._absorb([rejection])
+        try:
+            self.risk.kill_switch.trip(
+                "post-close authoritative broker reconciliation was refused"
+            )
+        except Exception:
+            pass
+        self._event(
+            timestamp,
+            "POST_CLOSE_RECONCILE_FAILED",
+            rejection.detail,
+            level="ERROR",
+        )
 
     def _on_cancelled(self, event: BrokerEvent) -> None:
         for slot in ("stop_order", "target_order"):
@@ -451,7 +578,199 @@ class ExecutionEngine:
                 self._update_order(order, OrderStatus.CANCELLED, event.timestamp,
                                    detail=event.detail)
         if self.state.entry_order is not None and self.state.entry_order.order_id == event.order_id:
+            order = self.state.entry_order
+            self._update_order(
+                order,
+                OrderStatus.CANCELLED,
+                event.timestamp,
+                detail=event.detail or "entry cancellation confirmed by venue",
+            )
             self.state.entry_order = None
+            if order.intent_id:
+                self._intents.pop(order.intent_id, None)
+
+    def _cancel_pending_entry(self, ts: datetime, *, detail: str) -> bool:
+        """Request cancellation without treating the request as terminal evidence."""
+        pending = self.state.entry_order
+        if pending is None or pending.status.is_terminal:
+            return True
+        if pending.status is OrderStatus.CANCEL_REQUESTED:
+            return False
+        accepted = self._cancel(pending, ts)
+        if accepted:
+            self._event(ts, "ENTRY_CANCEL_REQUESTED", detail, level="WARN")
+        return accepted
+
+    def _drain_broker_events_fail_safe(self, ts: datetime) -> bool:
+        """Apply immediately available cancel/fill evidence without hiding failures."""
+        try:
+            self._apply_events(self.broker.poll_events())
+        except Exception as exc:
+            self.risk.kill_switch.trip(
+                "emergency broker events could not cross the guarded trust boundary"
+            )
+            self.risk.kill_switch.record_error(
+                f"emergency entry-cancel event poll failed: {exc}"
+            )
+            self._event(
+                ts,
+                "ENTRY_CANCEL_POLL_FAILED",
+                f"{type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return False
+        return True
+
+    def _resolve_guarded_entry_before_flat(
+        self,
+        ts: datetime,
+        *,
+        detail: str,
+    ) -> bool:
+        """Cancel and reconcile a restored entry before claiming venue flatness.
+
+        ``ExecutionState.entry_order`` is process-local and can be empty after restart
+        while the guard's durable reservation still names a working venue entry.  This
+        barrier reconciles that exact reservation, requests its narrowly authorized
+        cancellation, drains terminal/race-fill evidence, and reconciles again.  It also
+        refuses clearance while an authoritative working order is either a known ENTRY or
+        cannot be classified by this guard.
+        """
+
+        first_rejection = None
+        try:
+            first_rejection = self.broker.reconcile_risk_state(now=ts)
+        except Exception as exc:
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_RECONCILE_FAILED",
+                f"{type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+
+        pending = self.broker.pending_entry
+        terminal_pending_states = {
+            PendingEntryState.FILLED,
+            PendingEntryState.TERMINAL_REPORTED,
+        }
+        if pending is not None and pending.state not in terminal_pending_states:
+            self.risk.kill_switch.trip(
+                "startup or STOP found an unresolved durable entry"
+            )
+            self.state.bot_state = BotState.KILLED
+            broker_order_id = pending.broker_order_id
+            if not broker_order_id:
+                if first_rejection is not None:
+                    self._absorb([first_rejection])
+                self._event(
+                    ts,
+                    "ENTRY_RECOVERY_UNRESOLVED",
+                    f"{detail}: durable entry has no exact broker order id",
+                    level="ERROR",
+                )
+                return False
+            try:
+                cancellation = self.broker.cancel_entry(broker_order_id, now=ts)
+            except Exception as exc:
+                self._event(
+                    ts,
+                    "ENTRY_RECOVERY_CANCEL_FAILED",
+                    f"{type(exc).__name__}: {exc}",
+                    level="ERROR",
+                )
+                return False
+            if not cancellation.accepted:
+                self._absorb([cancellation.rejection])
+                self._event(
+                    ts,
+                    "ENTRY_RECOVERY_CANCEL_REFUSED",
+                    cancellation.rejection.detail,
+                    level="ERROR",
+                )
+                return False
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_CANCEL_REQUESTED",
+                f"{detail}: {broker_order_id}",
+                level="WARN",
+            )
+            if not self._drain_broker_events_fail_safe(ts):
+                return False
+
+        final_rejection = None
+        try:
+            final_rejection = self.broker.reconcile_risk_state(now=ts)
+        except Exception as exc:
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_RECONCILE_FAILED",
+                f"post-cancel {type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return False
+        pending_after = self.broker.pending_entry
+        terminal_pending = (
+            pending_after is not None
+            and pending_after.state in terminal_pending_states
+        )
+        expected_terminal_reservation_lock = (
+            terminal_pending
+            and final_rejection is not None
+            and final_rejection.stage == "GUARD_RESERVATION"
+        )
+        if final_rejection is not None and not expected_terminal_reservation_lock:
+            self._absorb([final_rejection])
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_UNRESOLVED",
+                final_rejection.detail,
+                level="ERROR",
+            )
+            return False
+        if pending_after is not None and not terminal_pending:
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_UNRESOLVED",
+                f"{detail}: durable entry remains after post-cancel reconciliation",
+                level="ERROR",
+            )
+            return False
+
+        try:
+            broker_orders = self.broker.get_orders()
+        except Exception as exc:
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_RECONCILE_FAILED",
+                f"working-order proof failed: {type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return False
+        possible_entries = []
+        for broker_order in broker_orders:
+            if not broker_order.status.is_working:
+                continue
+            submitted = self.broker.submitted_order(broker_order.broker_order_id)
+            if submitted is None or submitted.purpose is OrderPurpose.ENTRY:
+                possible_entries.append(broker_order)
+        if possible_entries:
+            self.risk.kill_switch.trip(
+                "authoritative broker state contains an unresolved working entry"
+            )
+            self.state.bot_state = BotState.KILLED
+            self._event(
+                ts,
+                "ENTRY_RECOVERY_UNRESOLVED",
+                f"{len(possible_entries)} working broker order(s) may add exposure",
+                level="ERROR",
+                payload={
+                    "broker_order_ids": [
+                        order.broker_order_id for order in possible_entries
+                    ]
+                },
+            )
+            return False
+        return True
 
     # ================================================================== protective orders
 
@@ -668,20 +987,12 @@ class ExecutionEngine:
         # market close waits for its acknowledgement/fill.
         pending_entry = self.state.entry_order
         if pending_entry is not None and pending_entry.status.is_working:
-            if self._cancel(pending_entry, ts):
-                self.state.entry_order = None
-                if pending_entry.intent_id:
-                    self._intents.pop(pending_entry.intent_id, None)
-
-        if self.state.last_bar is None:
-            self._event(
+            self._cancel_pending_entry(
                 ts,
-                "FLATTEN_FAILED",
-                f"cannot submit emergency flatten without a market bar: {detail}",
-                level="ERROR",
+                detail="unprotected exposure requires entry-remainder cancellation",
             )
-            return
-        self._flatten(self.state.last_bar, ExitReason.RISK_HALT, detail)
+
+        self._flatten_at(ts, ExitReason.RISK_HALT, detail)
 
     def _cancel_protection(self, ts: datetime) -> None:
         for slot in ("stop_order", "target_order"):
@@ -757,6 +1068,16 @@ class ExecutionEngine:
     # ================================================================== flatten
 
     def _flatten(self, bar: Bar, reason: ExitReason, detail: str) -> None:
+        self._flatten_at(bar.timestamp, reason, detail)
+
+    def _flatten_at(self, timestamp: datetime, reason: ExitReason, detail: str) -> None:
+        """Submit a tracked local-position close at an explicit aware timestamp.
+
+        A market bar supplies a mark, not authorization to reduce exposure. Emergency
+        STOP and startup paths must remain able to close a known local Position before
+        the first bar arrives, so flattening depends only on position provenance and a
+        timestamp.
+        """
         position = self.state.position
         if position is None:
             return
@@ -767,13 +1088,13 @@ class ExecutionEngine:
         # cancels the remaining stop/target only after the position is actually closed.
         self.state.pending_exit = PendingExit(reason, detail)
 
-        decision = self.risk.evaluate_exit(position, reason="FLATTEN", now=bar.timestamp)
+        decision = self.risk.evaluate_exit(position, reason="FLATTEN", now=timestamp)
         approval = decision.approval
         self._register(approval.order)
         try:
-            result = self.broker.place_order(approval.order, approval.token, now=bar.timestamp)
+            result = self.broker.place_order(approval.order, approval.token, now=timestamp)
         except BrokerError as exc:
-            self._event(bar.timestamp, "FLATTEN_FAILED", str(exc), level="ERROR")
+            self._event(timestamp, "FLATTEN_FAILED", str(exc), level="ERROR")
             self.risk.kill_switch.record_error(f"flatten failed: {exc}")
             return
 
@@ -784,21 +1105,75 @@ class ExecutionEngine:
                 if result.rejection.reason is RejectReason.BROKER_ERROR
                 else "FLATTEN_REFUSED"
             )
-            self._event(bar.timestamp, kind, result.rejection.detail, level="ERROR")
+            self._event(timestamp, kind, result.rejection.detail, level="ERROR")
             self.risk.kill_switch.record_error(
                 f"flatten refused: {result.rejection.reason.value}"
             )
             return
 
         self._broker_ids[approval.order.order_id] = result.ack.broker_order_id
-        self._update_order(approval.order, OrderStatus.ACCEPTED, bar.timestamp,
+        self._update_order(approval.order, OrderStatus.ACCEPTED, timestamp,
                            broker_order_id=result.ack.broker_order_id, detail=reason.value)
-        self._event(bar.timestamp, "FLATTEN", f"{reason.value}: {detail}")
+        self._event(timestamp, "FLATTEN", f"{reason.value}: {detail}")
 
     def flatten_now(self, reason: ExitReason = ExitReason.MANUAL, detail: str = "") -> None:
         """External flatten request — the dashboard STOP button, or shutdown."""
-        if self.state.last_bar is not None and self.state.position is not None:
-            self._flatten(self.state.last_bar, reason, detail)
+        self.risk.kill_switch.trip(
+            f"external STOP TRADING request: {reason.value}"
+            + (f": {detail}" if detail else "")
+        )
+        timestamp = (
+            self.state.last_bar.timestamp
+            if self.state.last_bar is not None
+            else self.risk.clock.now()
+        )
+        self._cancel_pending_entry(
+            timestamp,
+            detail="external STOP TRADING request",
+        )
+        self._drain_broker_events_fail_safe(timestamp)
+        entry_barrier_clear = self._resolve_guarded_entry_before_flat(
+            timestamp,
+            detail="external STOP TRADING entry recovery",
+        )
+        self.state.bot_state = BotState.KILLED
+        if self.state.position is not None:
+            self._flatten_at(timestamp, reason, detail)
+            return
+
+        # A cancellation race or process restart can leave the venue exposed while local
+        # execution state is flat.  Local flatness is never proof of broker flatness.
+        try:
+            positions = self.broker.get_positions()
+        except Exception as exc:
+            self._event(
+                timestamp,
+                "RECOVERY_FLATTEN_FAILED",
+                f"could not read broker exposure after STOP: {type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            self.risk.kill_switch.record_error(
+                "STOP could not read authoritative broker exposure"
+            )
+            return
+        if any(position.quantity != 0 for position in positions):
+            self._submit_recovery_flatten(
+                timestamp,
+                "external STOP found broker exposure without local position provenance",
+            )
+        elif entry_barrier_clear:
+            self._event(
+                timestamp,
+                "STOP_BROKER_FLAT",
+                "external STOP confirmed no authoritative broker exposure",
+            )
+        else:
+            self._event(
+                timestamp,
+                "STOP_FLAT_UNCONFIRMED",
+                "broker position read was flat but entry recovery remains unresolved",
+                level="ERROR",
+            )
 
     # ================================================================== recovery
 
@@ -810,6 +1185,16 @@ class ExecutionEngine:
         journalled so the divergence is visible rather than papered over.
         """
         report = {"broker_positions": [], "local_position": None, "action": "none"}
+        if not self.broker.is_connected():
+            self._event(now, "RECONCILE_FAILED", "broker not connected", level="ERROR")
+            report["action"] = "failed"
+            return report
+        if not self._resolve_guarded_entry_before_flat(
+            now,
+            detail="startup reconciliation entry recovery",
+        ):
+            report["action"] = "pending_entry_unresolved"
+            return report
         try:
             positions = self.broker.get_positions()
         except NotConnected:
@@ -830,7 +1215,13 @@ class ExecutionEngine:
         broker_qty = sum(p.quantity for p in positions if p.instrument == self.instrument.symbol)
         local_qty = local.signed_quantity if local is not None else 0
 
-        if broker_qty == local_qty:
+        unexpected_positions = tuple(
+            position
+            for position in positions
+            if position.quantity != 0 and position.instrument != self.instrument.symbol
+        )
+
+        if broker_qty == local_qty and not unexpected_positions:
             report["action"] = "in_sync"
             self._event(now, "RECONCILED", f"in sync at {broker_qty} contracts")
             return report
@@ -842,31 +1233,247 @@ class ExecutionEngine:
             payload=report,
         )
 
-        if broker_qty == 0:
+        if broker_qty == 0 and not unexpected_positions:
             self.state.position = None
-            self.state.bot_state = BotState.RUNNING
+            self.state.bot_state = (
+                BotState.KILLED
+                if self.risk.kill_switch.is_active()
+                else BotState.RUNNING
+            )
             report["action"] = "cleared_local_position"
             return report
 
-        # The broker holds a position this process does not know how to manage: it has no
-        # recorded stop, and inventing one would be worse than closing. Flatten it.
-        matching = next(p for p in positions if p.instrument == self.instrument.symbol)
-        self.state.position = Position(
-            instrument=matching.instrument,
-            side=Side.BUY if broker_qty > 0 else Side.SELL,
-            quantity=abs(broker_qty),
-            entry_price=matching.average_price,
-            entry_time=now,
-            strategy=self.strategy.name,
-            initial_stop=0.0,
-            stop_price=0.0,
+        # Broker exposure without matching local provenance must never be converted into
+        # a synthetic Position or Trade.  Latch STOP and ask the guard to mint an exact
+        # broker-snapshot close; only a later authoritative flat read can clear local
+        # state.
+        self.risk.kill_switch.trip(
+            "restart reconciliation found broker exposure without matching provenance"
         )
-        report["action"] = "adopted_and_will_flatten"
-        self.state.bot_state = BotState.IN_POSITION
-        if self.state.last_bar is not None:
-            self._flatten(self.state.last_bar, ExitReason.MANUAL,
-                          "adopted an unmanaged position on restart")
+        self.state.bot_state = BotState.KILLED
+        submitted = self._submit_recovery_flatten(
+            now,
+            "restart reconciliation found unmanaged broker exposure",
+        )
+        report["action"] = (
+            "recovery_flatten_submitted" if submitted else "recovery_flatten_refused"
+        )
         return report
+
+    def _submit_recovery_flatten(self, timestamp: datetime, detail: str) -> bool:
+        """Submit and track a close derived solely from an authoritative broker read."""
+
+        self.risk.kill_switch.trip(detail)
+        self.state.bot_state = BotState.KILLED
+        for order_id in self._recovery_flatten_order_ids:
+            existing = self._orders.get(order_id)
+            if existing is not None and existing.status.is_working:
+                self._event(
+                    timestamp,
+                    "RECOVERY_FLATTEN_ALREADY_WORKING",
+                    f"recovery order {existing.order_id} already covers the incident",
+                    level="WARN",
+                )
+                return True
+        try:
+            result = self.broker.flatten_recovered_exposure(now=timestamp)
+        except Exception as exc:
+            self._event(
+                timestamp,
+                "RECOVERY_FLATTEN_FAILED",
+                f"{type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            self.risk.kill_switch.record_error(
+                "broker-authoritative recovery flatten raised"
+            )
+            return False
+
+        if not result.accepted:
+            self._absorb([result.rejection])
+            self._event(
+                timestamp,
+                "RECOVERY_FLATTEN_REFUSED",
+                result.rejection.detail,
+                level="ERROR",
+            )
+            self.risk.kill_switch.record_error(
+                f"recovery flatten refused: {result.rejection.reason.value}"
+            )
+            return False
+
+        ack = result.ack
+        order = self.broker.submitted_order(ack.broker_order_id)
+        if order is None:
+            self._event(
+                timestamp,
+                "RECOVERY_FLATTEN_FAILED",
+                "guard accepted recovery flatten but exposed no canonical submitted order",
+                level="ERROR",
+            )
+            self.risk.kill_switch.record_error(
+                "recovery flatten acknowledgement lacked canonical order"
+            )
+            return False
+
+        self._recovery_flatten_order_ids.add(order.order_id)
+        self._register(order)
+        self._broker_ids[order.order_id] = ack.broker_order_id
+        self._update_order(
+            order,
+            ack.status,
+            timestamp,
+            broker_order_id=ack.broker_order_id,
+            detail="broker-authoritative recovery flatten",
+        )
+        self._event(
+            timestamp,
+            "RECOVERY_FLATTEN_SUBMITTED",
+            f"{order.side.name} {order.quantity} {order.instrument}: {detail}",
+            level="WARN",
+            payload={
+                "order_id": order.order_id,
+                "broker_order_id": ack.broker_order_id,
+                "quantity": order.quantity,
+            },
+        )
+        return True
+
+    def _confirm_recovery_flat(self, timestamp: datetime) -> bool:
+        """Clear stale local exposure only after guarded reconciliation and final proof."""
+
+        try:
+            rejection = self.broker.reconcile_risk_state(now=timestamp)
+        except Exception as exc:
+            self._event(
+                timestamp,
+                "RECOVERY_STATE_RECONCILE_FAILED",
+                f"{type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return False
+        if rejection is not None:
+            self._absorb([rejection])
+            self._event(
+                timestamp,
+                "RECOVERY_STATE_RECONCILE_FAILED",
+                rejection.detail,
+                level="ERROR",
+            )
+            return False
+
+        if self.broker.pending_entry is not None:
+            self._event(
+                timestamp,
+                "RECOVERY_FLAT_UNCONFIRMED",
+                "durable pending entry remains after guarded reconciliation",
+                level="ERROR",
+            )
+            return False
+
+        # If stale local protection survived the broker-truth flatten, retire it only
+        # after the full guarded reconciliation above succeeded. Keep the local Position
+        # object until cancellation events, another full reconciliation, and the final
+        # no-exposure/no-working-order proof all succeed.
+        for slot in ("stop_order", "target_order"):
+            protection = getattr(self.state, slot)
+            if protection is None or protection.status.is_terminal:
+                continue
+            if not self._cancel(protection, timestamp):
+                self._event(
+                    timestamp,
+                    "RECOVERY_FLAT_UNCONFIRMED",
+                    f"could not retire stale {slot} after broker-truth flatten",
+                    level="ERROR",
+                )
+                return False
+        if not self._drain_broker_events_fail_safe(timestamp):
+            return False
+
+        try:
+            final_rejection = self.broker.reconcile_risk_state(now=timestamp)
+        except Exception as exc:
+            self._event(
+                timestamp,
+                "RECOVERY_STATE_RECONCILE_FAILED",
+                f"post-protection {type(exc).__name__}: {exc}",
+                level="ERROR",
+            )
+            return False
+        if final_rejection is not None:
+            self._absorb([final_rejection])
+            self._event(
+                timestamp,
+                "RECOVERY_STATE_RECONCILE_FAILED",
+                final_rejection.detail,
+                level="ERROR",
+            )
+            return False
+        if not self._final_broker_flat_proof(timestamp):
+            return False
+
+        # Only now may stale local execution state be discarded. The recovery fill still
+        # does not create a synthetic Trade because its entry/stop provenance is unknown.
+        self.state.position = None
+        self.state.pending_exit = None
+        self.state.stop_order = None
+        self.state.target_order = None
+        self.state.bot_state = BotState.KILLED
+        self.state.equity = self.risk.state.equity
+        self._event(
+            timestamp,
+            "RECOVERY_FLAT_CONFIRMED",
+            "authoritative broker read confirms flat; kill switch remains latched",
+            level="WARN",
+        )
+        return True
+
+    def _final_broker_flat_proof(self, timestamp: datetime) -> bool:
+        """Best available non-atomic flat proof using the current public broker API.
+
+        Two order->position passes catch an order that fills during either sequential
+        read, and a newly visible working order in the second pass. They cannot exclude an
+        entirely new owner submitting and filling between reads; Stage 2 remains blocked
+        until the adapter supplies account-owner fencing and an atomic recovery boundary.
+        """
+
+        for pass_number in (1, 2):
+            try:
+                orders = self.broker.get_orders()
+                positions = self.broker.get_positions()
+            except Exception as exc:
+                self._event(
+                    timestamp,
+                    "RECOVERY_FLAT_UNCONFIRMED",
+                    f"final proof pass {pass_number} failed: "
+                    f"{type(exc).__name__}: {exc}",
+                    level="ERROR",
+                )
+                return False
+            working = tuple(order for order in orders if order.status.is_working)
+            nonflat = tuple(position for position in positions if position.quantity != 0)
+            if working or nonflat:
+                self._event(
+                    timestamp,
+                    "RECOVERY_FLAT_UNCONFIRMED",
+                    f"final proof pass {pass_number} found {len(working)} working "
+                    f"order(s) and {len(nonflat)} non-flat position(s)",
+                    level="ERROR",
+                    payload={
+                        "working_broker_order_ids": [
+                            order.broker_order_id for order in working
+                        ],
+                        "positions": [
+                            {
+                                "instrument": position.instrument,
+                                "quantity": position.quantity,
+                            }
+                            for position in nonflat
+                        ],
+                    },
+                )
+                return False
+        return True
 
     # ================================================================== bookkeeping
 

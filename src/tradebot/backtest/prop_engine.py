@@ -347,6 +347,7 @@ def _run_guarded_prop_history(
         # The versioned prop state below owns the actual firm floor. The generic percent
         # research circuit breaker is deliberately not allowed to impersonate it.
         enforce_drawdown_floor=False,
+        cost_config=config.costs,
     )
     broker = SimulatedBroker(
         instrument,

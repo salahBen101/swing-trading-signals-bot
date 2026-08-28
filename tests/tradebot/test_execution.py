@@ -7,12 +7,13 @@ guarantees that make a backtest believable.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 
 import pandas as pd
 import pytest
 
-from tradebot.broker.base import NotConnected, OrderRejected
+from tradebot.broker.base import BrokerEvent, EventKind, NotConnected, OrderRejected
 from tradebot.broker.costs import CostModel
 from tradebot.broker.guarded import GuardResult, GuardedBroker
 from tradebot.broker.simulated import SimulatedBroker
@@ -26,7 +27,7 @@ from tradebot.config import (
     SimulatedBrokerConfig,
 )
 from tradebot.core.clock import MARKET_TZ, SimulatedClock
-from tradebot.core.models import AccountSnapshot, Bar, OrderIntent, Rejection
+from tradebot.core.models import AccountSnapshot, Bar, Fill, OrderIntent, Rejection
 from tradebot.core.types import (
     ExitReason,
     OrderPurpose,
@@ -42,6 +43,12 @@ from tradebot.journal.db import Journal
 from tradebot.journal.queries import JournalReader
 from tradebot.risk.killswitch import KillSwitch
 from tradebot.risk.limits import RiskDecision, RiskEngine
+from tradebot.risk.reservations import (
+    FilePendingEntryReservationStore,
+    PendingEntryState,
+    ReservationStoreError,
+)
+from tradebot.risk.state_store import FileRiskStateStore
 from tradebot.strategy.base import Strategy, StrategySpec, TradingHours
 
 MNQ = get_instrument("MNQ")
@@ -148,9 +155,9 @@ def rig(tmp_path):
     return build
 
 
-def run(engine, bars, clock, *, warmup=0, stop_after=None):
+def run(engine, bars, clock, *, warmup=0, stop_after=None, start=0):
     features = build_features(bars).frame
-    for i in range(len(bars)):
+    for i in range(start, len(bars)):
         if stop_after is not None and i > stop_after:
             break
         row = bars.iloc[i]
@@ -160,6 +167,158 @@ def run(engine, bars, clock, *, warmup=0, stop_after=None):
         engine.on_bar(bar, features.iloc[i], index=i, frame=features, bars=bars,
                       warmed_up=i >= warmup)
     return engine
+
+
+def seed_broker_only_long(engine, sim, clock, bars, *, signal_index=2, fill_index=3):
+    """Create venue exposure without giving ExecutionEngine fictional provenance."""
+
+    signal_time = bars.index[signal_index].to_pydatetime()
+    clock.set(signal_time)
+    decision = engine.risk.evaluate_entry(
+        OrderIntent(
+            timestamp=signal_time,
+            instrument="MNQ",
+            side=Side.BUY,
+            strategy="restart-seed",
+            stop_price=17_980.0,
+            target_price=18_100.0,
+            reference_price=18_000.0,
+            conditions=("broker-only seed",),
+        ),
+        equity=engine.state.equity,
+        position=None,
+        now=signal_time,
+    )
+    assert decision.approved
+    result = engine.broker.place_order(
+        decision.approval.order,
+        decision.approval.token,
+        now=signal_time,
+    )
+    assert result.accepted
+
+    row = bars.iloc[fill_index]
+    fill_bar = Bar(
+        bars.index[fill_index].to_pydatetime(),
+        row.open,
+        row.high,
+        row.low,
+        row.close,
+        row.volume,
+    )
+    clock.set(fill_bar.timestamp)
+    engine.broker.on_bar_open(fill_bar)
+    assert sim.get_positions()[0].quantity == decision.approval.order.quantity
+    assert engine.state.position is None
+    assert engine.state.last_bar is None
+    return fill_bar
+
+
+def durable_pending_restart_rig(tmp_path, bars):
+    """Return a fresh engine whose guard restored an ACKNOWLEDGED IOC entry."""
+
+    signal_time = bars.index[2].to_pydatetime()
+    clock = SimulatedClock(signal_time)
+    costs = CostModel.from_config(
+        CostConfig(commission_round_trip_usd=1.24, slippage_ticks_per_side=1.0),
+        MNQ,
+    )
+    config = RiskConfig(
+        starting_equity_usd=50_000.0,
+        per_trade=PerTradeRisk(
+            risk_pct_of_equity=0.5,
+            max_risk_per_trade_usd=200.0,
+            max_contracts=3,
+            min_contracts=1,
+        ),
+        daily=DailyRisk(
+            max_daily_loss_usd=200.0,
+            max_daily_loss_r=4.0,
+            max_trades_per_day=1,
+        ),
+        kill_switch=KillSwitchConfig(flag_file=str(tmp_path / "durable-stop.flag")),
+    )
+    session = SessionConfig()
+    sim = SimulatedBroker(
+        MNQ,
+        costs,
+        config=SimulatedBrokerConfig(latency_ms=0),
+        clock=clock,
+    )
+    sim.connect()
+    risk_store = FileRiskStateStore(tmp_path / "durable-risk.json")
+    pending_store = FilePendingEntryReservationStore(tmp_path / "durable-pending.json")
+
+    def make_risk(*, bootstrap):
+        return RiskEngine(
+            config,
+            MNQ,
+            session,
+            clock=clock,
+            kill_switch=KillSwitch(tmp_path / "durable-stop.flag", clock=clock),
+            expected_broker_account_id="SIM-1",
+            expected_broker_name="simulated",
+            expected_broker_is_paper=True,
+            expected_broker_route="simulated-local-paper",
+            risk_state_store=risk_store,
+            bootstrap_risk_state_store=bootstrap,
+            risk_state_context_id="execution-restart-recovery:stage0",
+        )
+
+    first_risk = make_risk(bootstrap=True)
+    first_guard = GuardedBroker(
+        sim,
+        first_risk,
+        reservation_store=pending_store,
+    )
+    assert first_guard.reconcile_risk_state(now=signal_time) is None
+    decision = first_risk.evaluate_entry(
+        OrderIntent(
+            timestamp=signal_time,
+            instrument="MNQ",
+            side=Side.BUY,
+            strategy="durable-ioc",
+            stop_price=17_980.0,
+            target_price=18_100.0,
+            reference_price=18_000.0,
+            conditions=("durable pending restart",),
+        ),
+        now=signal_time,
+    )
+    assert decision.approved
+    submitted = first_guard.place_order(
+        decision.approval.order,
+        decision.approval.token,
+        now=signal_time,
+    )
+    assert submitted.accepted
+    assert pending_store.load().state is PendingEntryState.ACKNOWLEDGED
+
+    restarted_risk = make_risk(bootstrap=False)
+    restarted_guard = GuardedBroker(
+        sim,
+        restarted_risk,
+        reservation_store=pending_store,
+    )
+    assert restarted_guard.pending_entry.state is PendingEntryState.ACKNOWLEDGED
+    journal = Journal(tmp_path / "durable-restart.sqlite3", run_id="durable-restart")
+    journal.start_run(
+        mode="BACKTEST",
+        instrument="MNQ",
+        strategy="scripted",
+        broker="simulated",
+        config={},
+        started_at=signal_time,
+    )
+    engine = ExecutionEngine(
+        ScriptedStrategy({}),
+        restarted_risk,
+        restarted_guard,
+        MNQ,
+        costs,
+        journal=journal,
+    )
+    return engine, sim, journal, clock, pending_store
 
 
 # ============================================================ the happy path
@@ -178,13 +337,13 @@ def test_a_signal_never_fills_on_the_bar_that_produced_it(rig):
     assert entry_time == bars.index[6]
 
 
-def test_the_entry_fills_at_the_next_bars_open_plus_slippage(rig):
+def test_bounded_entry_limit_fills_at_the_next_bars_open_without_adverse_slippage(rig):
     bars = make_bars([18000 + i for i in range(20)])
     engine, sim, journal, clock = rig(bars, {5: (Side.BUY, 17990.0, 18050.0)})
     run(engine, bars, clock)
 
     position = engine.state.position
-    expected = MNQ.round_to_tick(bars["open"].iloc[6] + MNQ.tick_size)
+    expected = MNQ.round_to_tick(bars["open"].iloc[6])
     assert position.entry_price == expected
 
 
@@ -296,6 +455,95 @@ def test_a_refused_initial_stop_immediately_submits_an_emergency_flatten(
     )
     events = JournalReader(journal.path, run_id="test-run").events(level="ERROR")
     assert {event["kind"] for event in events} >= {"PROTECTION_REFUSED"}
+
+
+def test_terminal_stop_ack_fails_to_engine_and_engages_emergency_flatten(
+    rig,
+    monkeypatch,
+):
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+    )
+    original_submit = sim.place_order
+
+    def terminal_stop_ack(order):
+        ack = original_submit(order)
+        if order.purpose is OrderPurpose.STOP:
+            return replace(ack, status=OrderStatus.CANCELLED)
+        return ack
+
+    monkeypatch.setattr(sim, "place_order", terminal_stop_ack)
+
+    run(engine, bars, clock, stop_after=5)
+
+    assert engine.state.position is not None
+    assert engine.state.stop_order is None
+    assert engine.state.pending_exit is not None
+    assert engine.risk.kill_switch.is_active()
+    assert any(
+        order.purpose is OrderPurpose.FLATTEN and order.status.is_working
+        for order in engine._orders.values()
+    )
+    errors = JournalReader(journal.path, run_id="test-run").events(level="ERROR")
+    assert {event["kind"] for event in errors} >= {"PROTECTION_REFUSED"}
+
+
+@pytest.mark.parametrize(
+    ("protective_name", "wrong_field"),
+    [("target_order", "side"), ("stop_order", "instrument")],
+)
+def test_malformed_protective_fill_is_withheld_before_local_trade_closes(
+    rig,
+    monkeypatch,
+    protective_name: str,
+    wrong_field: str,
+):
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+    )
+    run(engine, bars, clock, stop_after=5)
+    original_position = engine.state.position
+    assert original_position is not None
+    protective = getattr(engine.state, protective_name)
+    assert protective is not None
+    broker_order_id = engine._broker_ids[protective.order_id]
+    expected_price = (
+        protective.limit_price
+        if protective.limit_price is not None
+        else protective.stop_price
+    )
+    assert expected_price is not None
+    fill = Fill(
+        fill_id=f"malformed-{wrong_field}-protective-fill",
+        order_id=protective.order_id,
+        timestamp=clock.now(),
+        instrument="MES" if wrong_field == "instrument" else protective.instrument,
+        side=Side.BUY if wrong_field == "side" else protective.side,
+        quantity=protective.quantity,
+        price=expected_price,
+        broker_fill_id=f"venue-malformed-{wrong_field}",
+        is_partial=False,
+    )
+    event = BrokerEvent(
+        kind=EventKind.FILL,
+        timestamp=clock.now(),
+        order_id=protective.order_id,
+        broker_order_id=broker_order_id,
+        fill=fill,
+        detail="crafted protective fill",
+    )
+    monkeypatch.setattr(sim, "poll_events", lambda: [event])
+
+    with pytest.raises(ReservationStoreError, match=wrong_field):
+        engine.broker.poll_events()
+
+    assert engine.state.position is original_position
+    assert engine.state.trades == []
+    assert engine.risk.kill_switch.is_active()
 
 
 @pytest.mark.parametrize(
@@ -508,6 +756,147 @@ def test_a_forced_exit_beats_the_strategy(rig):
     assert 8 not in engine.strategy.managed
 
 
+def test_stop_trading_cancels_an_unfilled_entry_before_the_next_match(rig):
+    bars = make_bars([18_000.0] * 12, wick=20.0)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+    )
+    run(engine, bars, clock, stop_after=4)
+    assert engine.state.entry_order is not None
+    assert sim.working_order_count == 1
+
+    engine.flatten_now(ExitReason.MANUAL, "operator pressed STOP TRADING")
+
+    assert engine.risk.kill_switch.is_active()
+    assert engine.state.entry_order is None
+    assert sim.working_order_count == 0
+    run(engine, bars, clock, start=5, stop_after=6)
+    assert engine.state.position is None
+    assert sim.get_positions() == []
+    assert engine.state.trades == []
+
+
+def test_stop_without_a_bar_flattens_a_known_local_position(rig):
+    bars = make_bars([18_000.0] * 14)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+    )
+    run(engine, bars, clock, stop_after=7)
+    assert engine.state.position is not None
+
+    engine.state.last_bar = None
+    engine.flatten_now(ExitReason.MANUAL, "STOP before next market bar")
+
+    flatten_orders = [
+        order
+        for order in engine._orders.values()
+        if order.purpose is OrderPurpose.FLATTEN
+    ]
+    assert len(flatten_orders) == 1
+    assert engine.state.pending_exit is not None
+    assert engine.risk.kill_switch.is_active()
+
+
+def test_stop_with_flat_local_state_recovers_broker_long_before_first_bar(rig):
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(bars, {})
+    seed_broker_only_long(engine, sim, clock, bars)
+
+    engine.flatten_now(ExitReason.MANUAL, "operator STOP after local-state loss")
+
+    recovery_orders = [
+        order
+        for order in engine._orders.values()
+        if order.strategy == "broker-recovery-flatten"
+    ]
+    assert len(recovery_orders) == 1
+    assert recovery_orders[0].purpose is OrderPurpose.FLATTEN
+    assert engine.state.position is None
+    assert engine.state.last_bar is None
+    assert engine.risk.kill_switch.is_active()
+
+    run(engine, bars, clock, start=4, stop_after=4)
+
+    assert sim.get_positions() == []
+    assert engine.state.position is None
+    assert engine.state.trades == []
+    assert engine.state.bot_state.value == "KILLED"
+    events = JournalReader(journal.path, run_id="test-run").events()
+    kinds = {event["kind"] for event in events}
+    assert "RECOVERY_FLATTEN_SUBMITTED" in kinds
+    assert "RECOVERY_FLAT_CONFIRMED" in kinds
+
+
+@pytest.mark.parametrize("entrypoint", ["stop", "reconcile"])
+def test_fresh_engine_cancels_durable_acknowledged_ioc_before_declaring_flat(
+    tmp_path, entrypoint
+):
+    bars = make_bars([18_000.0] * 8)
+    engine, sim, journal, clock, pending_store = durable_pending_restart_rig(
+        tmp_path,
+        bars,
+    )
+
+    if entrypoint == "stop":
+        engine.flatten_now(ExitReason.MANUAL, "durable pending IOC")
+    else:
+        report = engine.reconcile(clock.now())
+        assert report["action"] == "in_sync"
+
+    assert engine.broker.pending_entry is None
+    assert pending_store.load() is None
+    assert sim.working_order_count == 0
+    assert engine.risk.kill_switch.is_active()
+
+    run(engine, bars, clock, start=3, stop_after=3)
+    assert sim.get_positions() == []
+    assert engine.state.position is None
+    events = JournalReader(journal.path, run_id="durable-restart").events()
+    assert not any(event["kind"] == "UNTRACKED_BROKER_FILL" for event in events)
+
+
+@pytest.mark.parametrize("entrypoint", ["stop", "reconcile"])
+def test_durable_ioc_cancel_race_fill_is_recovered_without_fabricated_trade(
+    tmp_path, monkeypatch, entrypoint
+):
+    bars = make_bars([18_000.0] * 8)
+    engine, sim, journal, clock, pending_store = durable_pending_restart_rig(
+        tmp_path,
+        bars,
+    )
+    # Model an asynchronous venue: the cancel command returns, but the IOC remains
+    # eligible and wins the race at the next open before terminal cancellation arrives.
+    monkeypatch.setattr(sim, "cancel_order", lambda broker_order_id: None)
+
+    if entrypoint == "stop":
+        engine.flatten_now(ExitReason.MANUAL, "injected cancel race")
+    else:
+        report = engine.reconcile(clock.now())
+        assert report["action"] == "pending_entry_unresolved"
+
+    assert engine.broker.pending_entry.state is PendingEntryState.CANCEL_REQUESTED
+    assert sim.working_order_count == 1
+    assert engine.risk.kill_switch.is_active()
+
+    # First open fills the unknown restored IOC and submits an exact recovery flatten;
+    # second open fills that reduce-only close and completes authoritative confirmation.
+    run(engine, bars, clock, start=3, stop_after=4)
+
+    assert sim.get_positions() == []
+    assert sim.working_order_count == 0
+    assert engine.broker.pending_entry is None
+    assert pending_store.load() is None
+    assert engine.state.position is None
+    assert engine.state.trades == []
+    events = JournalReader(journal.path, run_id="durable-restart").events()
+    kinds = {event["kind"] for event in events}
+    assert "UNTRACKED_BROKER_FILL" in kinds
+    assert "RECOVERY_FLATTEN_SUBMITTED" in kinds
+    assert "RECOVERY_FLAT_CONFIRMED" in kinds
+
+
 # ============================================================ partial fills
 
 
@@ -527,35 +916,113 @@ def test_a_partially_filled_entry_still_gets_full_protection(rig):
     )
 
 
-def test_a_partial_entry_reaverages_the_entry_price(rig):
-    bars = make_bars([18000 + i * 5 for i in range(25)])
+def test_terminal_cancel_with_late_fill_applies_economics_once_and_protects(rig):
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+        sim_config=SimulatedBrokerConfig(
+            latency_ms=0,
+            partial_fill_probability=1.0,
+            seed=1,
+        ),
+    )
+    run(engine, bars, clock, stop_after=4)
+
+    row = bars.iloc[5]
+    next_bar = Bar(
+        bars.index[5].to_pydatetime(),
+        row.open,
+        row.high,
+        row.low,
+        row.close,
+        row.volume,
+    )
+    clock.set(next_bar.timestamp)
+    engine.broker.on_bar_open(next_bar)
+    venue_events = engine.broker.poll_events()
+    partial = next(
+        event for event in venue_events if event.kind is EventKind.PARTIAL_FILL
+    )
+    terminal = BrokerEvent(
+        kind=EventKind.CANCELLED,
+        timestamp=partial.timestamp,
+        order_id=partial.order_id,
+        broker_order_id=partial.broker_order_id,
+        fill=partial.fill,
+        detail="cancel confirmed with late partial fill",
+    )
+
+    engine._apply_events([terminal, terminal])
+
+    assert engine.state.position is not None
+    assert engine.state.position.quantity == partial.fill.quantity == 1
+    assert engine.state.entry_order is None
+    assert engine.state.stop_order is not None
+    assert engine.state.stop_order.quantity == 1
+    assert sim.get_positions()[0].quantity == 1
+    fills = JournalReader(journal.path, run_id="test-run").fills()
+    assert [fill["fill_id"] for fill in fills] == [partial.fill.fill_id]
+
+
+def test_a_partial_ioc_entry_is_revalidated_once_and_never_adds_later(
+    rig, monkeypatch
+):
+    # Even when every later open remains inside the signed limit, IOC permits exactly one
+    # eligible open match and terminally cancels the unfilled remainder.
+    bars = make_bars([18000 + i * 0.25 for i in range(25)])
     engine, sim, journal, clock = rig(
         bars, {4: (Side.BUY, 17900.0, 19000.0)},
         sim_config=SimulatedBrokerConfig(latency_ms=0, partial_fill_probability=1.0, seed=1),
     )
+    observed_quantities: list[int] = []
+    original_position_opened = engine.risk.on_position_opened
+
+    def observe_position(position):
+        observed_quantities.append(position.quantity)
+        return original_position_opened(position)
+
+    monkeypatch.setattr(engine.risk, "on_position_opened", observe_position)
     run(engine, bars, clock, stop_after=14)
 
     position = engine.state.position
-    assert position is not None and position.quantity >= 2
+    assert position is not None and position.quantity == 1
     fills = JournalReader(journal.path, run_id="test-run").fills()
     entry_fills = [f for f in fills if f["side"] == 1]
-    assert len(entry_fills) >= 2
+    assert len(entry_fills) == 1
     weighted = sum(f["price"] * f["quantity"] for f in entry_fills) / sum(
         f["quantity"] for f in entry_fills
     )
     assert position.entry_price == pytest.approx(weighted)
+    assert observed_quantities == [1]
+    assert engine.state.entry_order is None
+    assert engine.risk.state.trades_today == 1
 
 
-def test_partial_exits_accumulate_into_one_complete_trade_and_risk_result(rig):
+def test_partial_exits_accumulate_and_terminal_fill_reconciles_broker_equity(
+    rig, monkeypatch
+):
     bars = make_bars([18000.0] * 8 + [18020.0] * 10)
     engine, sim, journal, clock = rig(
         bars, {4: (Side.BUY, 17980.0, 18010.0)},
         sim_config=SimulatedBrokerConfig(
-            latency_ms=0, partial_fill_probability=1.0, seed=1
+            latency_ms=0, partial_fill_probability=0.0, seed=1
         ),
     )
+    reconciled_at = []
+    original_reconcile = engine.broker.reconcile_risk_state
 
-    run(engine, bars, clock)
+    def observe_reconcile(*, now=None):
+        reconciled_at.append(now)
+        return original_reconcile(now=now)
+
+    monkeypatch.setattr(engine.broker, "reconcile_risk_state", observe_reconcile)
+
+    run(engine, bars, clock, stop_after=7)
+    assert engine.state.position is not None
+    assert engine.state.position.quantity == 3
+    sim.config = replace(sim.config, partial_fill_probability=1.0)
+    run(engine, bars, clock, start=8)
 
     assert len(engine.state.trades) == 1
     trade = engine.state.trades[0]
@@ -563,7 +1030,9 @@ def test_partial_exits_accumulate_into_one_complete_trade_and_risk_result(rig):
     expected = 50_000.0 + trade.net_pnl_usd
     assert engine.state.equity == pytest.approx(expected)
     assert sim.get_account().equity == pytest.approx(expected)
+    assert engine.risk.state.equity == pytest.approx(expected)
     assert engine.risk.state.daily_realized_pnl == pytest.approx(trade.net_pnl_usd)
+    assert reconciled_at == [trade.exit_time]
 
 
 def test_market_slippage_accumulates_across_partial_entry_and_exit_fills(rig):
@@ -572,13 +1041,14 @@ def test_market_slippage_accumulates_across_partial_entry_and_exit_fills(rig):
         bars,
         {4: (Side.BUY, 17980.0, 18100.0)},
         sim_config=SimulatedBrokerConfig(
-            latency_ms=0, partial_fill_probability=1.0, seed=1
+            latency_ms=0, partial_fill_probability=0.0, seed=1
         ),
     )
 
     run(engine, bars, clock, stop_after=8)
     assert engine.state.position is not None
     assert engine.state.position.quantity == 3
+    sim.config = replace(sim.config, partial_fill_probability=1.0)
     engine.flatten_now(ExitReason.MANUAL, "slippage attribution test")
 
     features = build_features(bars).frame
@@ -604,9 +1074,10 @@ def test_market_slippage_accumulates_across_partial_entry_and_exit_fills(rig):
             break
 
     trade = engine.state.trades[0]
-    # Six contract-sides x 0.25 point x the $2 MNQ multiplier.
-    assert trade.slippage_usd == pytest.approx(3.0)
-    assert trade.gross_pnl_usd == pytest.approx(-3.0)
+    # The bounded entry limit has no adverse slippage; only three market-exit contract
+    # sides incur 0.25 point x the $2 MNQ multiplier.
+    assert trade.slippage_usd == pytest.approx(1.5)
+    assert trade.gross_pnl_usd == pytest.approx(-1.5)
     assert trade.net_pnl_usd == pytest.approx(
         trade.gross_pnl_usd - trade.commission_usd
     ), "slippage is already present in fill prices and must not be subtracted twice"
@@ -734,6 +1205,7 @@ def test_restart_reconciles_against_the_broker_when_both_agree(rig):
     run(engine, bars, clock, stop_after=8)
     assert engine.state.position is not None
 
+    clock.set(at(11, 0))
     report = engine.reconcile(at(11, 0))
     assert report["action"] == "in_sync"
 
@@ -744,6 +1216,7 @@ def test_restart_clears_a_local_position_the_broker_does_not_have(rig, position_
     run(engine, bars, clock, stop_after=3)
 
     engine.state.position = position_factory(quantity=2)  # stale local belief
+    clock.set(at(11, 0))
     report = engine.reconcile(at(11, 0))
 
     assert report["action"] == "cleared_local_position"
@@ -752,19 +1225,72 @@ def test_restart_clears_a_local_position_the_broker_does_not_have(rig, position_
     assert any(e["kind"] == "RECONCILE_DIVERGENCE" for e in events)
 
 
-def test_restart_flattens_a_broker_position_it_cannot_manage(rig):
-    """A position with no recorded stop is one this process cannot risk-manage."""
-    bars = make_bars([18000] * 20)
-    engine, sim, journal, clock = rig(bars, {4: (Side.BUY, 17980.0, 18100.0)})
-    run(engine, bars, clock, stop_after=8)
+def test_restart_before_first_bar_flattens_broker_position_without_fabricating_trade(
+    rig, monkeypatch
+):
+    """Broker quantity authorizes a close, never a made-up strategy Position."""
 
-    # Simulate a restart: the engine forgets, the broker does not.
-    engine.state.position = None
-    engine.state.stop_order = None
-    engine.state.target_order = None
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(bars, {})
+    fill_bar = seed_broker_only_long(engine, sim, clock, bars)
 
-    report = engine.reconcile(bars.index[8].to_pydatetime())
-    assert report["action"] == "adopted_and_will_flatten"
+    def forbid_fabricated_position(*args, **kwargs):
+        raise AssertionError("restart recovery must not construct a Position")
+
+    monkeypatch.setattr("tradebot.execution.engine.Position", forbid_fabricated_position)
+    report = engine.reconcile(fill_bar.timestamp)
+
+    assert report["action"] == "recovery_flatten_submitted"
+    assert engine.state.position is None
+    assert engine.state.last_bar is None
+    assert engine.risk.kill_switch.is_active()
+
+    run(engine, bars, clock, start=4, stop_after=4)
+
+    assert sim.get_positions() == []
+    assert engine.state.position is None
+    assert engine.state.trades == []
+    assert engine.state.bot_state.value == "KILLED"
+    events = JournalReader(journal.path, run_id="test-run").events()
+    assert any(event["kind"] == "RECOVERY_FLAT_CONFIRMED" for event in events)
+
+
+def test_recovery_confirmation_account_mismatch_retains_local_state_and_protection(
+    rig, monkeypatch
+):
+    bars = make_bars([18_000.0] * 12)
+    engine, sim, journal, clock = rig(
+        bars,
+        {4: (Side.BUY, 17_980.0, 18_100.0)},
+    )
+    run(engine, bars, clock, stop_after=7)
+    position = engine.state.position
+    stop = engine.state.stop_order
+    target = engine.state.target_order
+    assert position is not None and stop is not None and target is not None
+
+    mismatch = Rejection(
+        timestamp=clock.now(),
+        reason=RejectReason.LIVE_TRADING_DISABLED,
+        detail="authoritative broker account identity changed",
+        stage="BROKER_SNAPSHOT",
+    )
+    monkeypatch.setattr(
+        engine.broker,
+        "reconcile_risk_state",
+        lambda *, now=None: mismatch,
+    )
+    # Reproduce the old unsafe ordering: a raw position read appears flat even though the
+    # full guarded account/route reconciliation refuses the snapshot.
+    monkeypatch.setattr(engine.broker, "get_positions", lambda: [])
+
+    assert not engine._confirm_recovery_flat(clock.now())
+
+    assert engine.state.position is position
+    assert engine.state.stop_order is stop
+    assert engine.state.target_order is target
+    events = JournalReader(journal.path, run_id="test-run").events()
+    assert not any(event["kind"] == "RECOVERY_FLAT_CONFIRMED" for event in events)
 
 
 def test_reconcile_reports_failure_when_the_broker_is_unreachable(rig):

@@ -11,17 +11,30 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import tradebot.risk.coordinator as coordinator_module
+import tradebot.deployment.stages as stages_module
 from tradebot.config import KillSwitchConfig, RiskConfig, SessionConfig
 from tradebot.core.clock import SimulatedClock
 from tradebot.core.models import Order, OrderIntent, Position
 from tradebot.core.types import OrderPurpose, OrderType, RejectReason, Side
-from tradebot.deployment.stages import DeploymentStage, StageAuthorization
+from tradebot.deployment.stages import (
+    ApprovalManifest,
+    DeploymentStage,
+    StageAuthorization,
+    artifact_sha256,
+    authorize_stage,
+)
 from tradebot.instruments.registry import get_instrument
-from tradebot.prop_firms import load_prop_profile
+from tradebot.prop_firms import (
+    RuleVerificationResult,
+    SourceCheck,
+    VerificationStatus,
+    load_prop_profile,
+)
 from tradebot.risk.coordinator import (
     ContractKind,
     RuntimeRiskContext,
     ThreeLayerRiskEngine,
+    canonical_risk_state_context_id,
 )
 from tradebot.risk.broker_state import (
     AuthoritativeBrokerSnapshot,
@@ -35,6 +48,7 @@ from tradebot.risk.prop import (
     initial_prop_account_state,
 )
 from tradebot.risk.strategy_gate import StrategyGate
+from tradebot.risk.state_store import FileRiskStateStore
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +56,12 @@ ET = ZoneInfo("America/New_York")
 CHECKED = date(2026, 8, 20)
 NOW = datetime(2026, 8, 20, 10, 0, tzinfo=ET)
 MNQ = get_instrument("MNQ")
+PROFILE_PATH = ROOT / "config" / "prop_firms" / "tradeify_growth_50k.yaml"
+SNAPSHOT_PATH = ROOT / "config" / "prop_firms" / "source_snapshots.yaml"
+CONFIG_PATH = ROOT / "config" / "tradebot.yaml"
+STRATEGY_PATH = ROOT / "src" / "tradebot" / "strategy" / "orb_breakout.py"
+TEST_REVISION = "0" * 40
+TEST_RUNTIME_CONFIG_SHA256 = "1" * 64
 
 
 def broker_snapshot(ts=NOW, *, positions=()):
@@ -50,6 +70,7 @@ def broker_snapshot(ts=NOW, *, positions=()):
         captured_at=ts,
         broker_name="coordinator-test-broker",
         broker_is_paper=True,
+        execution_route="coordinator-test-broker paper",
         account=BrokerRiskAccount(
             account_id="COORDINATOR-50K",
             equity=50_000.0,
@@ -77,6 +98,72 @@ def fresh_profile():
     )
 
 
+def signed_stage_authorization(
+    *,
+    stage: DeploymentStage = DeploymentStage.PROP_EVALUATION,
+    account_id: str = "COORDINATOR-50K",
+    phase: str = "evaluation",
+) -> StageAuthorization:
+    """Mint the same authenticated capability the real startup gate must supply."""
+    profile = fresh_profile()
+    digest = "a" * 64
+    verification = RuleVerificationResult(
+        profile_id=profile.profile_id,
+        checked_at=NOW,
+        status=VerificationStatus.UNCHANGED,
+        checks=tuple(
+            SourceCheck(source.url, digest, digest, changed=False)
+            for source in profile.sources
+        ),
+    )
+    approval = ApprovalManifest(
+        schema_version=1,
+        stage=stage,
+        approved=True,
+        approved_by="coordinator-test-human",
+        approved_at=NOW,
+        account_id=account_id,
+        prop_profile_id=profile.profile_id,
+        prop_phase=phase,
+        prop_profile_sha256=artifact_sha256(PROFILE_PATH),
+        source_snapshot_sha256=artifact_sha256(SNAPSHOT_PATH),
+        runtime_config_sha256=artifact_sha256(CONFIG_PATH),
+        strategy_artifact_sha256=artifact_sha256(STRATEGY_PATH),
+        code_revision=TEST_REVISION,
+        execution_route="coordinator-test-broker paper",
+        execution_route_verified=True,
+        sole_owner_attested=True,
+        firm_exclusive_use_attested=True,
+        production_frozen=True,
+    )
+    original = stages_module._read_authorization_environment
+    original_profile_loader = stages_module._load_authorization_profile
+    original_verifier = stages_module._run_authorization_rule_verification
+    stages_module._read_authorization_environment = lambda: (
+        stages_module._AuthorizationEnvironment(NOW, TEST_REVISION, True)
+    )
+    stages_module._load_authorization_profile = lambda path: profile
+    stages_module._run_authorization_rule_verification = (
+        lambda loaded, path, *, checked_at: verification
+    )
+    try:
+        authorization = authorize_stage(
+            stage,
+            as_of=NOW,
+            profile_path=PROFILE_PATH,
+            source_snapshot_path=SNAPSHOT_PATH,
+            runtime_config_path=CONFIG_PATH,
+            strategy_artifact_path=STRATEGY_PATH,
+            manifest=approval,
+        )
+    finally:
+        stages_module._read_authorization_environment = original
+        stages_module._load_authorization_profile = original_profile_loader
+        stages_module._run_authorization_rule_verification = original_verifier
+    assert authorization.allowed, authorization.reason
+    return authorization
+
+
 def valid_intent(**changes) -> OrderIntent:
     values = {
         "timestamp": NOW,
@@ -85,7 +172,9 @@ def valid_intent(**changes) -> OrderIntent:
         "strategy": "deterministic_pullback",
         "reference_price": 18_000.0,
         "stop_price": 17_990.0,
-        "target_price": 18_020.0,
+        # The signed entry can be four ticks adverse (18,001). This target preserves
+        # exactly 2R at that executable bound: (18,023-18,001)/(18,001-17,990).
+        "target_price": 18_023.0,
         "conditions": ("trend_up", "pullback_complete"),
     }
     values.update(changes)
@@ -152,15 +241,16 @@ def system_factory(tmp_path):
         contract_kind=ContractKind.MICRO,
         rules_name="evaluation",
         events=None,
+        risk_state_store=None,
+        bootstrap_risk_state_store=False,
     ):
         profile = fresh_profile()
         rules = profile.rules_for(rules_name)
         state = initial_prop_account_state(profile, rules)
-        authorization = StageAuthorization(
-            stage,
-            True,
-            (),
-            account_id=("COORDINATOR-50K" if stage.requires_human_approval else None),
+        authorization = (
+            signed_stage_authorization(stage=stage, phase=rules.name)
+            if stage.requires_human_approval
+            else StageAuthorization(stage, True, ())
         )
         if context is None:
             context = RuntimeRiskContext(
@@ -174,6 +264,19 @@ def system_factory(tmp_path):
             )
         source = provider or ContextSource(context)
         clock = SimulatedClock(NOW)
+        strategy = RecordingStrategyGate(events)
+        risk_context_id = (
+            canonical_risk_state_context_id(
+                strategy_gate=strategy,
+                profile=profile,
+                rules=rules,
+                deployment_stage=stage,
+                contract_kind=contract_kind,
+                runtime_config_sha256=TEST_RUNTIME_CONFIG_SHA256,
+            )
+            if risk_state_store is not None and stage >= DeploymentStage.PAPER
+            else None
+        )
         personal = RecordingRiskEngine(
             RiskConfig(
                 kill_switch=KillSwitchConfig(
@@ -184,8 +287,10 @@ def system_factory(tmp_path):
             SessionConfig(),
             clock=clock,
             events=events,
+            risk_state_store=risk_state_store,
+            bootstrap_risk_state_store=bootstrap_risk_state_store,
+            risk_state_context_id=risk_context_id,
         )
-        strategy = RecordingStrategyGate(events)
         engine = ThreeLayerRiskEngine(
             strategy_gate=strategy,
             personal_risk=personal,
@@ -194,6 +299,7 @@ def system_factory(tmp_path):
             deployment_stage=stage,
             contract_kind=contract_kind,
             context_provider=source,
+            runtime_config_sha256=TEST_RUNTIME_CONFIG_SHA256,
         )
         bundle = (engine, personal, strategy, source, profile, rules, state)
         created.append(bundle)
@@ -219,7 +325,7 @@ def test_clean_entry_passes_all_layers_and_trace_omits_token(system_factory):
     encoded = json.dumps(payload)
     assert "signature" not in encoded.casefold()
     assert "token" not in encoded.casefold()
-    assert payload["approval"]["risk_usd"] == 60.0
+    assert payload["approval"]["risk_usd"] == pytest.approx(84.72)
     prop_state = payload["context"]["facts"]["prop_account_state"]
     assert prop_state["current_balance_usd"] == 50_000.0
     assert prop_state["drawdown_high_water_mark_usd"] == 50_000.0
@@ -227,6 +333,26 @@ def test_clean_entry_passes_all_layers_and_trace_omits_token(system_factory):
     assert prop_state["remaining_prop_drawdown_usd"] == 2_000.0
     assert prop_state["daily_pnl_usd"] == 0.0
     assert "payout_status" in prop_state
+
+
+def test_signal_level_two_r_is_rejected_after_adverse_entry_repricing(system_factory):
+    engine, personal, *_ = system_factory()
+
+    decision = engine.evaluate_entry(
+        valid_intent(target_price=18_020.0),
+        now=NOW,
+    )
+
+    assert not decision.allowed
+    assert decision.rejection.stage == "STRATEGY"
+    assert decision.rejection.reason is RejectReason.INVALID_ORDER
+    assert decision.personal_trace.allowed
+    assert not decision.prop_trace.evaluated
+    assert personal.entry_calls == 1
+    trace = decision.strategy_trace.decision
+    assert trace.expected_reward_risk == pytest.approx(19.0 / 11.0)
+    assert trace.check("entry_price").observed == 18_001.0
+    assert trace.failure_codes == ("minimum_expected_rr",)
 
 
 def test_rejected_decision_retains_complete_prop_account_trace_without_secrets(
@@ -373,6 +499,129 @@ def test_layer_three_hides_personal_approval_when_prop_refuses(system_factory):
     assert "token" not in json.dumps(decision.to_dict()).casefold()
 
 
+def test_prop_refusal_never_creates_a_durable_personal_entry_reservation(
+    system_factory, tmp_path
+):
+    profile = fresh_profile()
+    rules = profile.rules_for("evaluation")
+    breached = replace(
+        initial_prop_account_state(profile, rules),
+        hard_breached=True,
+        hard_breach_reasons=("test account breach",),
+    )
+    context = RuntimeRiskContext(
+        breached,
+        NOW,
+        True,
+        True,
+        MarketDayStatus.REGULAR,
+        NOW,
+        StageAuthorization(DeploymentStage.PAPER, True, ()),
+    )
+    store = FileRiskStateStore(tmp_path / "coordinated-risk.json")
+    engine, personal, *_ = system_factory(
+        context=context,
+        risk_state_store=store,
+        bootstrap_risk_state_store=True,
+    )
+    assert personal.reconcile_broker_snapshot(broker_snapshot(), now=NOW) is None
+
+    decision = engine.evaluate_entry(valid_intent(), now=NOW)
+
+    assert not decision.allowed
+    assert decision.rejection.stage == "PROP_FIRM"
+    assert store.load().state.active_entry_order_id is None
+
+
+def test_durable_entry_is_reserved_only_at_successful_final_three_layer_verify(
+    system_factory, tmp_path
+):
+    store = FileRiskStateStore(tmp_path / "coordinated-risk.json")
+    engine, personal, *_ = system_factory(
+        risk_state_store=store,
+        bootstrap_risk_state_store=True,
+    )
+    assert personal.reconcile_broker_snapshot(broker_snapshot(), now=NOW) is None
+    decision = engine.evaluate_entry(valid_intent(), now=NOW)
+    assert decision.approved
+    assert store.load().state.active_entry_order_id is None
+
+    rejection = engine.verify(
+        decision.approval.order,
+        decision.approval.token,
+        now=NOW,
+        broker_snapshot=broker_snapshot(),
+    )
+
+    assert rejection is None
+    assert store.load().state.active_entry_order_id == decision.approval.order.order_id
+
+
+def test_canonical_durable_context_binds_material_runtime_configuration() -> None:
+    profile = fresh_profile()
+    rules = profile.rules_for("evaluation")
+    strategy = RecordingStrategyGate()
+
+    first = canonical_risk_state_context_id(
+        strategy_gate=strategy,
+        profile=profile,
+        rules=rules,
+        deployment_stage=DeploymentStage.PAPER,
+        contract_kind=ContractKind.MICRO,
+        runtime_config_sha256="1" * 64,
+    )
+    changed = canonical_risk_state_context_id(
+        strategy_gate=strategy,
+        profile=profile,
+        rules=rules,
+        deployment_stage=DeploymentStage.PAPER,
+        contract_kind=ContractKind.MICRO,
+        runtime_config_sha256="2" * 64,
+    )
+
+    assert first.startswith("risk-context-v1:")
+    assert first != changed
+
+
+def test_durable_stage2_refuses_free_form_deployment_context(tmp_path) -> None:
+    profile = fresh_profile()
+    rules = profile.rules_for("evaluation")
+    strategy = RecordingStrategyGate()
+    clock = SimulatedClock(NOW)
+    personal = RiskEngine(
+        RiskConfig(
+            kill_switch=KillSwitchConfig(flag_file=str(tmp_path / "context.kill"))
+        ),
+        MNQ,
+        SessionConfig(),
+        clock=clock,
+        risk_state_store=FileRiskStateStore(tmp_path / "context-risk.json"),
+        bootstrap_risk_state_store=True,
+        risk_state_context_id="caller-chosen-text",
+    )
+    context = RuntimeRiskContext(
+        prop_state=initial_prop_account_state(profile, rules),
+        market_data_timestamp=NOW,
+        strategy_permitted=True,
+        session_permitted=True,
+        market_day_status=MarketDayStatus.REGULAR,
+        rule_verification_as_of=NOW,
+        stage_authorization=StageAuthorization(DeploymentStage.PAPER, True, ()),
+    )
+
+    with pytest.raises(ValueError, match="canonical deployment context"):
+        ThreeLayerRiskEngine(
+            strategy_gate=strategy,
+            personal_risk=personal,
+            profile=profile,
+            rules=rules,
+            deployment_stage=DeploymentStage.PAPER,
+            contract_kind=ContractKind.MICRO,
+            context_provider=ContextSource(context),
+            runtime_config_sha256=TEST_RUNTIME_CONFIG_SHA256,
+        )
+
+
 @pytest.mark.parametrize("failure", ["none", "wrong_type", "provider_exception"])
 def test_context_provider_failures_are_closed_before_every_layer(
     system_factory, failure
@@ -454,6 +703,12 @@ def test_mismatched_prop_state_is_a_context_failure(system_factory):
                 (),
                 account_id="COORDINATOR-50K",
             ),
+            False,
+            "stage_authorization_unauthenticated",
+        ),
+        (
+            DeploymentStage.PROP_EVALUATION,
+            signed_stage_authorization(),
             True,
             None,
         ),
@@ -522,6 +777,7 @@ def test_live_stage_authorization_without_account_identity_fails_before_sizing(
 
     assert not decision.allowed
     assert "stage_authorized_account_missing" in decision.context_trace.reason_codes
+    assert decision.rejection.reason is RejectReason.LIVE_TRADING_DISABLED
     assert strategy.calls == 0
     assert personal.entry_calls == 0
 
@@ -576,9 +832,8 @@ def test_live_stage_authorized_account_cannot_change_after_approval(system_facto
     personal.verify_calls = 0
     source.context = replace(
         source.context,
-        stage_authorization=replace(
-            source.context.stage_authorization,
-            account_id="CHANGED-AUTHORIZED-ACCOUNT",
+        stage_authorization=signed_stage_authorization(
+            account_id="CHANGED-AUTHORIZED-ACCOUNT"
         ),
     )
     changed_snapshot = broker_snapshot()
@@ -599,7 +854,53 @@ def test_live_stage_authorized_account_cannot_change_after_approval(system_facto
 
     assert rejection is not None
     assert rejection.stage == "BROKER_IDENTITY"
-    assert "changed after entry approval" in rejection.detail
+    assert "account identity changed after entry approval" in rejection.detail
+    assert personal.verify_calls == 0
+    assert not personal._tokens.is_spent(approval.token)
+
+
+def test_live_stage_capability_cannot_rotate_after_entry_approval(system_factory):
+    engine, personal, _, source, *_ = system_factory(
+        stage=DeploymentStage.PROP_EVALUATION
+    )
+    approval = engine.evaluate_entry(valid_intent(), now=NOW).approval
+    personal.verify_calls = 0
+    # Same approved account/profile/route, but a separately minted startup capability.
+    source.context = replace(
+        source.context,
+        stage_authorization=signed_stage_authorization(),
+    )
+
+    rejection = engine.verify(
+        approval.order,
+        approval.token,
+        now=NOW,
+        broker_snapshot=broker_snapshot(),
+    )
+
+    assert rejection is not None
+    assert rejection.stage == "BROKER_IDENTITY"
+    assert "capability changed after entry approval" in rejection.detail
+    assert personal.verify_calls == 0
+    assert not personal._tokens.is_spent(approval.token)
+
+
+def test_live_stage_authorized_route_must_match_broker_snapshot(system_factory):
+    engine, personal, *_ = system_factory(stage=DeploymentStage.PROP_EVALUATION)
+    approval = engine.evaluate_entry(valid_intent(), now=NOW).approval
+    personal.verify_calls = 0
+    wrong_route = replace(broker_snapshot(), execution_route="different-approved-route")
+
+    rejection = engine.verify(
+        approval.order,
+        approval.token,
+        now=NOW,
+        broker_snapshot=wrong_route,
+    )
+
+    assert rejection is not None
+    assert rejection.stage == "BROKER_IDENTITY"
+    assert "broker route" in rejection.detail
     assert personal.verify_calls == 0
     assert not personal._tokens.is_spent(approval.token)
 
@@ -794,7 +1095,8 @@ def test_prop_receives_exact_sized_quantity_risk_and_contract_kind(
     assert approval is not None
     assert requests[-1].requested_minis == expected_minis
     assert requests[-1].requested_micros == expected_micros
-    assert requests[-1].worst_case_loss_usd == approval.risk_usd == 60.0
+    assert requests[-1].worst_case_loss_usd == approval.risk_usd
+    assert approval.risk_usd == pytest.approx(84.72)
 
     assert engine.verify(
         approval.order, approval.token, now=NOW, broker_snapshot=broker_snapshot()

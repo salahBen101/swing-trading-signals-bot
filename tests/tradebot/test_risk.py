@@ -57,6 +57,7 @@ def broker_snapshot(
     account_id="TEST-50K",
     broker_name="test-broker",
     is_paper=True,
+    execution_route="test-broker-paper",
     positions=(),
     orders=(),
 ):
@@ -66,6 +67,7 @@ def broker_snapshot(
         captured_at=ts,
         broker_name=broker_name,
         broker_is_paper=is_paper,
+        execution_route=execution_route,
         account=BrokerRiskAccount(
             account_id=account_id,
             equity=equity,
@@ -109,10 +111,10 @@ def intent(*, side=Side.BUY, entry=18000.0, stop=17990.0, ts=None, strategy="t")
     )
 
 
-def losing_trade(pnl=-100.0, r=-1.0, ts=None) -> Trade:
+def losing_trade(pnl=-100.0, r=-1.0, ts=None, quantity=1) -> Trade:
     ts = ts or at()
     return Trade(
-        trade_id="t", instrument="MNQ", strategy="t", side=Side.BUY, quantity=1,
+        trade_id="t", instrument="MNQ", strategy="t", side=Side.BUY, quantity=quantity,
         entry_time=ts, entry_price=18000.0, exit_time=ts, exit_price=17990.0,
         exit_reason=ExitReason.STOP_LOSS, gross_pnl_usd=pnl, commission_usd=0.0,
         net_pnl_usd=pnl, r_multiple=r, bars_held=5, initial_stop=17990.0,
@@ -196,13 +198,75 @@ def test_a_clean_entry_is_approved_and_sized_by_the_engine_not_the_strategy(engi
     decision = engine.evaluate_entry(intent())
     assert decision.approved
     approval = decision.approval
-    # Budget min(50000 x 0.5%, 250) = 250; risk per contract 10 pts x $2 = $20 -> 12,
-    # capped at max_contracts = 3.
+    # Worst entry is bounded four ticks above reference: 11 points x $2, plus $1.24
+    # round-trip commission, $1 stressed slippage, and an $4 stop-gap reserve = $28.24.
     assert approval.contracts == 3
-    assert approval.risk_usd == 60.0
+    assert approval.risk_usd == pytest.approx(84.72)
+    assert approval.order.order_type is OrderType.LIMIT
+    assert approval.order.limit_price == 18_001.0
+    assert approval.order.time_in_force is TimeInForce.IOC
     assert approval.order.quantity == 3
     assert approval.order.purpose == "ENTRY"
     assert approval.token is not None
+
+
+def test_all_in_costs_can_make_a_raw_200_dollar_stop_unaffordable(tmp_path):
+    clock = SimulatedClock(at())
+    cfg = risk_config(
+        per_trade=PerTradeRisk(
+            risk_pct_of_equity=1.0,
+            max_risk_per_trade_usd=200.0,
+            max_contracts=3,
+            min_contracts=1,
+        ),
+        kill_switch=KillSwitchConfig(flag_file=str(tmp_path / "all-in.kill")),
+    )
+    risk = RiskEngine(
+        cfg,
+        MNQ,
+        SessionConfig(),
+        clock=clock,
+        kill_switch=KillSwitch(tmp_path / "all-in.kill", clock=clock),
+    )
+
+    # Reference-to-stop risk is exactly $200 for one MNQ. The four-tick entry bound,
+    # round-trip commission, and stressed stop slippage make true risk exceed the cap.
+    decision = risk.evaluate_entry(intent(stop=17_900.0))
+
+    assert not decision.approved
+    assert decision.rejection.reason is RejectReason.SIZE_BELOW_MINIMUM
+    assert "Skipping" in decision.rejection.detail
+
+
+def test_explicit_limit_uses_its_worst_price_and_all_in_cost_reserve(engine):
+    requested = replace(
+        intent(),
+        order_type=OrderType.LIMIT,
+        limit_price=18_000.0,
+    )
+
+    approval = engine.evaluate_entry(requested).approval
+
+    assert approval is not None
+    assert approval.order.order_type is OrderType.LIMIT
+    assert approval.order.limit_price == 18_000.0
+    assert approval.order.time_in_force is TimeInForce.IOC
+    assert approval.order.stop_price is None
+    assert approval.risk_usd == pytest.approx(78.72)
+
+
+@pytest.mark.parametrize("unsafe_type", [OrderType.STOP, OrderType.STOP_LIMIT])
+def test_unbounded_stop_entry_types_are_rejected(engine, unsafe_type):
+    requested = replace(
+        intent(),
+        order_type=unsafe_type,
+        limit_price=18_001.0 if unsafe_type is OrderType.STOP_LIMIT else None,
+    )
+
+    decision = engine.evaluate_entry(requested)
+
+    assert decision.rejection.reason is RejectReason.INVALID_ORDER
+    assert "disabled" in decision.rejection.detail
 
 
 def test_only_one_position_at_a_time(engine, position_factory):
@@ -256,13 +320,18 @@ def test_the_daily_r_cap_halts_the_session(engine):
 def test_consecutive_losses_start_a_cooldown_that_blocks_entries(engine):
     engine.roll_session(at())
     for i in range(3):
-        engine.on_trade_closed(losing_trade(pnl=-50.0, r=-0.5, ts=at(11, i)))
+        # Match the engine's normal three-contract approval so this test isolates the
+        # cooldown rather than triggering the independent post-loss size-increase gate.
+        engine.on_trade_closed(
+            losing_trade(pnl=-50.0, r=-0.5, ts=at(11, i), quantity=3)
+        )
 
     assert engine.state.cooldown_until == at(11, 2) + timedelta(minutes=20)
     decision = engine.evaluate_entry(intent(ts=at(11, 10)), now=at(11, 10))
     assert decision.rejection.reason is RejectReason.CONSECUTIVE_LOSS_COOLDOWN
 
     # Once the cooldown expires, trading resumes.
+    engine.state.last_trade_approved_risk_usd = 84.72
     assert engine.evaluate_entry(intent(ts=at(11, 30)), now=at(11, 30)).approved
 
 
@@ -753,6 +822,26 @@ def test_verify_refuses_entry_without_an_authoritative_broker_snapshot(engine):
     assert rejection.stage == "BROKER_SNAPSHOT"
 
 
+def test_verify_recomputes_cushion_throttled_budget_from_fresh_broker_equity(
+    engine,
+):
+    approval = engine.evaluate_entry(intent()).approval
+    assert approval.risk_usd > 47.70
+
+    rejection = engine.verify(
+        approval.order,
+        approval.token,
+        now=at(),
+        broker_snapshot=broker_snapshot(equity=47_700.0),
+    )
+
+    assert rejection is not None
+    assert rejection.reason is RejectReason.MAX_RISK_PER_TRADE
+    assert rejection.stage == "GUARD"
+    assert rejection.context["current_risk_budget_usd"] == pytest.approx(47.70)
+    assert not engine._tokens.is_spent(approval.token)
+
+
 def test_verify_refuses_an_approval_spent_twice(engine):
     approval = engine.evaluate_entry(intent()).approval
     snapshot = broker_snapshot()
@@ -1050,6 +1139,16 @@ def test_rolling_within_the_same_day_changes_nothing(engine):
     engine.state.trades_today = 2
     assert not engine.roll_session(at(14, 0))
     assert engine.state.trades_today == 2
+
+
+def test_session_rollover_uses_market_date_not_the_timestamp_offset(engine):
+    engine.roll_session(at(11, 0))
+    # 00:30 UTC on April 2 is still 20:30 Eastern on April 1. Raw ``now.date()``
+    # would reset the daily quota four hours early.
+    same_market_day_in_utc = datetime.fromisoformat("2024-04-02T00:30:00+00:00")
+
+    assert not engine.roll_session(same_market_day_in_utc)
+    assert engine.state.session_date == at().date()
 
 
 def test_equity_and_peak_track_closed_trades(engine):

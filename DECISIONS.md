@@ -3,6 +3,90 @@
 Newest decisions appear first. Each entry records the choice, why it was made, and what
 would justify revisiting it.
 
+## 2026-08-25 — D013: Repeated source changes preserve, rather than reset, the block
+
+The next daily check still found all four August 24 page mismatches and added Tradeify's
+shared Daily Loss Limit page, affecting every current profile. Repeated or expanded hash
+differences do not make the current text self-approving. The dated profiles and reviewed
+hashes remain untouched, append-only alerts preserve both observations, and Stage 2+
+remains blocked.
+
+Revisit only through human comparison of the complete official text, cohort resolution,
+a newly versioned profile/baseline, tests, and explicit approval. Never roll a profile's
+verification date forward merely because the latest fetch completed successfully.
+
+## 2026-08-24 — D012: Entry lifetime and reward/risk are executable facts
+
+Every approved entry is now a bounded IOC limit. The simulator gives it exactly one
+eligible opening print: a non-marketable order expires without later wick or future-bar
+fills, and an opening partial fill cancels the remainder. The Tradovate projection carries
+the IOC instruction explicitly. The complete strategy geometry is repriced at the final
+signed execution bound before both approval and verification, so a setup that is 2R only
+at the signal reference cannot pass as 2R at the executable price. The generic Stage-0
+runner independently enforces the same finite, tick-aligned, protective geometry.
+
+This deliberately trades fill rate for bounded stale-order risk. Revisit resting-entry
+lifetime only after it is explicitly signed into the approval, survives final executable
+R:R checks, has deterministic cancellation/restart semantics, and is validated without
+using the locked holdout.
+
+## 2026-08-24 — D011: A changed official page invalidates the reviewed profile
+
+The official-source checker detected new content hashes on four Tradeify pages: Growth
+Evaluation, Lightning Funded Accounts, Select Evaluation, and Select funded/payout
+policies. This is a change alert, not a new rule verification. The 2026-08-22 profiles and
+source baselines remain deliberately unchanged and are stale for deployment; no rule is
+inferred from a hash difference and no live behaviour changes automatically.
+
+Revisit only after a human reviews the new official text, resolves every ambiguity,
+creates and tests a new dated profile/baseline, and explicitly approves it. Until then,
+all affected profiles fail closed for Stage 2+ and no live execution is enabled.
+
+## 2026-08-24 — D010: Every shipped adapter is blocked from Stage 2+
+
+Durable local files are necessary but cannot prove that the venue accepted a protected
+entry exactly once or that a second process cannot trade the same account. Stage 2 and
+later construction therefore requires all of: native atomic protection/OCO, venue-side
+reduce-only or close-position semantics, authoritative cancellation and exact terminal
+history, authoritative replay of the complete firm-session execution history, and an
+account-owner fencing generation. The simulator and Tradovate demo adapter truthfully
+advertise missing capabilities, so both are unconditionally refused at Stage 2+.
+
+Revisit only when an adapter implements and tests the complete capability set against a
+durable venue boundary. A test double may exercise the positive constructor path, but it
+does not qualify a real adapter or authorize live trading.
+
+## 2026-08-24 — D009: The $200 ceiling includes bounded entry movement and costs
+
+Sizing now begins with the worst executable entry price, not the signal reference. A
+market intent becomes a protective limit no farther than the configured entry-gap bound;
+the risk per contract is bound-to-stop loss plus a configured protective-stop gap reserve,
+round-trip commission, and stressed exit slippage. Quantity is floored from that all-in
+amount and then capped. Unbounded STOP and STOP_LIMIT entries are rejected, a broker fill
+outside the signed entry envelope latches the risk engine, and a realized loss above the
+approved pro-rata all-in envelope trips the kill switch.
+
+This protects planned risk under the signed execution assumptions. It is not a promise
+that realized loss cannot exceed $200: a market gap through the protective stop, fee
+changes, or worse-than-modelled exit liquidity can still exceed it. Revisit parameters
+only through configuration validation and stressed evidence, never by choosing quantity
+first.
+
+## 2026-08-24 — D008: Personal risk and unresolved entries are durable fail-closed ledgers
+
+Personal daily/session state and pending-entry state use separate versioned files with
+strict schemas, exact account/route/context bindings, atomic replace plus fsync, advisory
+writer locks, monotonic revisions, and compare-and-swap transitions. A one-time
+initialization marker prevents silent re-bootstrap after deletion. Restart remains locked
+until a fresh broker snapshot reconciles state, and malformed, missing, stale-writer, or
+ambiguous fill evidence preserves the reservation and blocks another entry. Durable
+failures latch entries while retaining narrowly validated risk-reducing actions.
+
+The two ledgers are not one cross-system transaction and cannot replace authoritative
+venue replay or ownership fencing. Revisit only to strengthen them or replace them with a
+transactional store that preserves the same bindings, monotonic fill evidence, and
+fail-closed recovery.
+
 ## 2026-08-22 — D007: Scenario results are an audit ledger, not an optimizer
 
 Prop-account Monte Carlo resamples complete trading sessions so intraday signal clusters,

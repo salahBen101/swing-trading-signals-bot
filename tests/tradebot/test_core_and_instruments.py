@@ -404,6 +404,51 @@ def test_defaults_alone_produce_a_valid_configuration():
     cfg = Config()
     cfg.validate()
     assert cfg.risk.per_trade.max_risk_per_trade_usd == 200.0
+    assert cfg.risk.per_trade.max_stop_gap_ticks == 8.0
     assert cfg.risk.daily.max_daily_loss_usd == 200.0
     assert cfg.risk.daily.max_trades_per_day == 1
     assert cfg.risk.max_open_positions == 1
+
+
+@pytest.mark.parametrize(
+    ("fragment", "path_fragment"),
+    [
+        ("risk:\n  starting_equity_usd: .nan\n", "risk.starting_equity_usd"),
+        (
+            "risk:\n  per_trade:\n    max_risk_per_trade_usd: .inf\n",
+            "risk.per_trade.max_risk_per_trade_usd",
+        ),
+        (
+            "risk:\n  daily:\n    max_daily_loss_usd: .nan\n",
+            "risk.daily.max_daily_loss_usd",
+        ),
+        (
+            "risk:\n  daily:\n    max_trades_per_day: true\n",
+            "risk.daily.max_trades_per_day",
+        ),
+        (
+            "risk:\n  drawdown:\n    trailing_drawdown_pct: .nan\n",
+            "risk.drawdown.trailing_drawdown_pct",
+        ),
+        (
+            "costs:\n  commission_round_trip_usd: .nan\n",
+            "costs.commission_round_trip_usd",
+        ),
+        (
+            "costs:\n  slippage_ticks_per_side: .inf\n",
+            "costs.slippage_ticks_per_side",
+        ),
+        (
+            "costs:\n  slippage_stress_multiplier: false\n",
+            "costs.slippage_stress_multiplier",
+        ),
+    ],
+)
+def test_loaded_risk_and_cost_scalars_reject_nonfinite_or_boolean_values(
+    tmp_path, fragment, path_fragment
+):
+    path = tmp_path / "invalid-scalar.yaml"
+    path.write_text(fragment, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=path_fragment.replace(".", r"\.")):
+        load_config(path)

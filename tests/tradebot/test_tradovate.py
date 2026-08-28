@@ -50,7 +50,7 @@ from tradebot.broker.tradovate.ws import (
 )
 from tradebot.core.clock import MARKET_TZ, SimulatedClock
 from tradebot.core.models import Order
-from tradebot.core.types import OrderStatus, OrderType, Side
+from tradebot.core.types import OrderStatus, OrderType, Side, TimeInForce
 from tradebot.instruments.registry import get_instrument
 
 MNQ = get_instrument("MNQ")
@@ -304,10 +304,15 @@ def wired():
         "auth/accesstokenrequest": token_response(),
         "account/list": {"items": [{"id": 12345, "name": "DEMO1",
                                     "cashBalance": 50000.0, "totalCashValue": 50120.0}]},
+        "contract/find?name=MNQZ6": {"id": 777, "name": "MNQZ6",
+                                      "contractMaturityId": 70},
+        "contractMaturity/item?id=70": {"id": 70, "productId": 7,
+                                          "expirationMonth": 202612},
+        "product/item?id=7": {"id": 7, "name": "MNQ"},
         "order/placeorder": {"orderId": 555},
         "order/cancelorder": {"commandId": 1},
-        "order/list": {"items": []},
-        "position/list": {"items": []},
+        "order/deps?masterid=12345": {"items": []},
+        "position/deps?masterid=12345": {"items": []},
         "fill/list": {"items": []},
     })
     broker = TradovateBroker(MNQ, transport=fake, credentials=creds(),
@@ -340,10 +345,44 @@ def test_placeorder_sends_exactly_the_documented_body(wired):
 
     assert body == {
         "accountSpec": "demo-user", "accountId": 12345, "action": "Buy",
-        "symbol": "MNQZ6", "orderQty": 2, "orderType": "Market", "isAutomated": True,
+        "symbol": "MNQZ6", "orderQty": 2, "orderType": "Market",
+        "timeInForce": "Day", "isAutomated": True,
     }
     assert ack.broker_order_id == "555"
     assert ack.status is OrderStatus.SUBMITTED
+
+
+def test_placeorder_rejects_an_intent_for_a_different_instrument(wired):
+    broker, fake = wired
+    broker.connect()
+    before = len([request for request in fake.requests
+                  if request["path"] == "order/placeorder"])
+
+    with pytest.raises(OrderRejected, match="does not match adapter instrument"):
+        broker.place_order(Order(order_id="o1", timestamp=at(), instrument="MES",
+                                 side=Side.BUY, quantity=1,
+                                 order_type=OrderType.MARKET))
+
+    after = len([request for request in fake.requests
+                 if request["path"] == "order/placeorder"])
+    assert after == before, "an instrument mismatch must be rejected before REST submission"
+
+
+def test_connect_refuses_a_concrete_contract_for_a_different_product():
+    fake = FakeTransport({
+        "auth/accesstokenrequest": token_response(),
+        "account/list": {"items": [{"id": 12345, "name": "DEMO1"}]},
+        "contract/find?name=MESZ6": {"id": 888, "name": "MESZ6",
+                                      "contractMaturityId": 80},
+        "contractMaturity/item?id=80": {"id": 80, "productId": 8},
+        "product/item?id=8": {"id": 8, "name": "MES"},
+    })
+    broker = TradovateBroker(MNQ, transport=fake, credentials=creds(),
+                             clock=SimulatedClock(at()), symbol="MESZ6")
+
+    with pytest.raises(OrderRejected, match="belongs to product 'MES', not 'MNQ'"):
+        broker.connect()
+    assert not broker.is_connected()
 
 
 def test_is_automated_is_always_true_and_never_configurable(wired):
@@ -376,6 +415,35 @@ def test_limit_and_stop_prices_are_snapped_to_the_tick_grid(wired):
     assert body["orderType"] == "StopLimit"
 
 
+@pytest.mark.parametrize(
+    ("time_in_force", "venue_value"),
+    [
+        (TimeInForce.DAY, "Day"),
+        (TimeInForce.GTC, "GTC"),
+        (TimeInForce.IOC, "IOC"),
+    ],
+)
+def test_signed_time_in_force_is_sent_to_the_venue(
+    wired, time_in_force, venue_value
+):
+    broker, fake = wired
+    broker.connect()
+    broker.place_order(
+        Order(
+            order_id=f"tif-{venue_value}",
+            timestamp=at(),
+            instrument="MNQ",
+            side=Side.BUY,
+            quantity=1,
+            order_type=OrderType.LIMIT,
+            limit_price=18_000.0,
+            time_in_force=time_in_force,
+        )
+    )
+
+    assert fake.last("order/placeorder")["body"]["timeInForce"] == venue_value
+
+
 def test_a_failure_reason_in_the_response_raises(wired):
     broker, fake = wired
     broker.connect()
@@ -405,14 +473,50 @@ def test_cancel_sends_the_broker_order_id_as_an_integer(wired):
 def test_positions_are_signed_and_flat_rows_are_dropped(wired):
     broker, fake = wired
     broker.connect()
-    fake.add("position/list", {"items": [
-        {"netPos": 3, "netPrice": 18000.25},
-        {"netPos": 0, "netPrice": 0.0},
-        {"netPos": -2, "netPrice": 17990.0},
+    fake.add("position/deps?masterid=12345", {"items": [
+        {"accountId": 12345, "contractId": 777,
+         "netPos": 3, "netPrice": 18000.25},
+        {"accountId": 12345, "contractId": 777,
+         "netPos": 0, "netPrice": 0.0},
+        {"accountId": 12345, "contractId": 777,
+         "netPos": -2, "netPrice": 17990.0},
     ]})
     positions = broker.get_positions()
     assert [p.quantity for p in positions] == [3, -2]
     assert positions[0].side is Side.BUY and positions[1].side is Side.SELL
+
+
+def test_positions_are_account_scoped_and_foreign_contracts_are_not_relabelled(wired):
+    broker, fake = wired
+    broker.connect()
+    fake.add("contract/item?id=888", {"id": 888, "name": "MESZ6",
+                                      "contractMaturityId": 80})
+    fake.add("position/deps?masterid=12345", {"items": [
+        {"accountId": 12345, "contractId": 777,
+         "netPos": 1, "netPrice": 18000.25},
+        {"accountId": 12345, "contractId": 888,
+         "netPos": -2, "netPrice": 5200.0},
+        {"accountId": 99999, "contractId": 777,
+         "netPos": 7, "netPrice": 18010.0},
+    ]})
+
+    positions = broker.get_positions()
+
+    assert [(p.instrument, p.quantity) for p in positions] == [
+        ("MNQ", 1), ("MESZ6", -2),
+    ]
+    assert fake.last("position/deps?masterid=12345") is not None
+
+
+def test_an_unidentifiable_nonflat_position_fails_closed(wired):
+    broker, fake = wired
+    broker.connect()
+    fake.add("position/deps?masterid=12345", {"items": [
+        {"accountId": 12345, "netPos": 1, "netPrice": 18000.25},
+    ]})
+
+    with pytest.raises(BrokerConnectionError, match="position.contractId"):
+        broker.get_positions()
 
 
 def test_the_account_is_read_from_the_configured_account_id(wired):
@@ -424,16 +528,63 @@ def test_the_account_is_read_from_the_configured_account_id(wired):
     assert account.cash == 50000.0
 
 
+def test_connect_refuses_a_configured_account_that_is_not_visible():
+    fake = FakeTransport({
+        "auth/accesstokenrequest": token_response(),
+        "account/list": {"items": [{"id": 99999, "name": "OTHER"}]},
+    })
+    broker = TradovateBroker(MNQ, transport=fake, credentials=creds(),
+                             clock=SimulatedClock(at()), symbol="MNQZ6")
+
+    with pytest.raises(OrderRejected, match="not uniquely visible"):
+        broker.connect()
+    assert not broker.is_connected()
+
+
+def test_connect_without_an_account_id_refuses_multiple_visible_accounts():
+    fake = FakeTransport({
+        "auth/accesstokenrequest": token_response(),
+        "account/list": {"items": [
+            {"id": 12345, "name": "DEMO1"},
+            {"id": 54321, "name": "DEMO2"},
+        ]},
+    })
+    broker = TradovateBroker(MNQ, transport=fake,
+                             credentials=creds(account_id=""),
+                             clock=SimulatedClock(at()), symbol="MNQZ6")
+
+    with pytest.raises(OrderRejected, match="configure an explicit account_id"):
+        broker.connect()
+    assert not broker.is_connected()
+
+
+def test_account_read_does_not_fall_back_when_selected_account_disappears(wired):
+    broker, fake = wired
+    broker.connect()
+    fake.add("account/list", {"items": [
+        {"id": 99999, "name": "OTHER", "totalCashValue": 999999.0},
+    ]})
+
+    with pytest.raises(BrokerConnectionError, match="not uniquely visible"):
+        broker.get_account()
+
+
 def test_order_status_words_map_onto_the_shared_vocabulary(wired):
     broker, fake = wired
     broker.connect()
-    fake.add("order/list", {"items": [
-        {"id": 1, "ordStatus": "Working", "cumQty": 0, "avgPx": 0},
-        {"id": 2, "ordStatus": "Filled", "cumQty": 2, "avgPx": 18000.25},
-        {"id": 3, "ordStatus": "Rejected", "cumQty": 0, "avgPx": 0},
+    fake.add("order/deps?masterid=12345", {"items": [
+        {"id": 1, "accountId": 12345, "contractId": 777,
+         "ordStatus": "Working", "cumQty": 0, "avgPx": 0},
+        {"id": 2, "accountId": 12345, "contractId": 777,
+         "ordStatus": "Filled", "cumQty": 2, "avgPx": 18000.25},
+        {"id": 3, "accountId": 12345, "contractId": 777,
+         "ordStatus": "Rejected", "cumQty": 0, "avgPx": 0},
+        {"id": 4, "accountId": 99999, "contractId": 777,
+         "ordStatus": "Working", "cumQty": 0, "avgPx": 0},
     ]})
     statuses = [o.status for o in broker.get_orders()]
     assert statuses == [OrderStatus.ACCEPTED, OrderStatus.FILLED, OrderStatus.REJECTED]
+    assert fake.last("order/deps?masterid=12345") is not None
 
 
 def test_fills_are_reported_once_each(wired):
@@ -446,7 +597,8 @@ def test_fills_are_reported_once_each(wired):
     broker.poll_events()
 
     fake.add("fill/list", {"items": [
-        {"id": 900, "orderId": 555, "qty": 2, "price": 18000.25, "action": "Buy",
+        {"id": 900, "orderId": 555, "contractId": 777,
+         "qty": 2, "price": 18000.25, "action": "Buy",
          "commission": 1.24, "timestamp": "2024-04-01T15:00:00Z"},
     ]})
     first = [e for e in broker.poll_events() if e.fill]
@@ -459,6 +611,67 @@ def test_fills_are_reported_once_each(wired):
 
     second = [e for e in broker.poll_events() if e.fill]
     assert second == [], "a fill must not be replayed on the next poll"
+
+
+def test_partial_fills_remain_nonterminal_until_cumulative_quantity_is_complete(wired):
+    broker, fake = wired
+    broker.connect()
+    broker.poll_events()
+    broker.place_order(Order(order_id="o1", timestamp=at(), instrument="MNQ",
+                             side=Side.BUY, quantity=2,
+                             order_type=OrderType.MARKET))
+    broker.poll_events()
+
+    fake.add("fill/list", {"items": [
+        {"id": 901, "orderId": 555, "contractId": 777,
+         "qty": 1, "price": 18000.25, "action": "Buy", "active": True},
+    ]})
+    partial = [event for event in broker.poll_events() if event.fill]
+    assert len(partial) == 1
+    assert partial[0].kind.value == "PARTIAL_FILL"
+    assert partial[0].fill.is_partial is True
+
+    fake.add("fill/list", {"items": [
+        {"id": 901, "orderId": 555, "contractId": 777,
+         "qty": 1, "price": 18000.25, "action": "Buy", "active": True},
+        {"id": 902, "orderId": 555, "contractId": 777,
+         "qty": 1, "price": 18000.50, "action": "Buy", "active": True},
+    ]})
+    complete = [event for event in broker.poll_events() if event.fill]
+    assert len(complete) == 1
+    assert complete[0].kind.value == "FILL"
+    assert complete[0].fill.is_partial is False
+
+
+def test_fill_list_rows_for_unknown_orders_are_not_projected_as_mnq_fills(wired):
+    broker, fake = wired
+    broker.connect()
+    broker.poll_events()
+    fake.add("fill/list", {"items": [
+        {"id": 903, "orderId": 999, "contractId": 888,
+         "qty": 1, "price": 5200.0, "action": "Buy"},
+    ]})
+
+    assert [event for event in broker.poll_events() if event.fill] == []
+
+
+def test_a_malformed_known_fill_fails_closed_without_a_terminal_fill(wired):
+    broker, fake = wired
+    broker.connect()
+    broker.poll_events()
+    broker.place_order(Order(order_id="o1", timestamp=at(), instrument="MNQ",
+                             side=Side.BUY, quantity=1,
+                             order_type=OrderType.MARKET))
+    broker.poll_events()
+    fake.add("fill/list", {"items": [
+        {"id": 904, "orderId": 555, "contractId": 777,
+         "qty": 1, "price": 0, "action": "Buy"},
+    ]})
+
+    events = broker.poll_events()
+
+    assert [event for event in events if event.fill] == []
+    assert any("fill projection failed" in event.detail for event in events)
 
 
 def test_a_failing_fill_poll_does_not_take_the_runner_down(wired):

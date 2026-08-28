@@ -5,6 +5,45 @@ Profile scope: newly purchased/current-dashboard 50K futures accounts
 Runtime profiles: `config/prop_firms/tradeify_growth_50k.yaml`,
 `tradeify_select_50k.yaml`, and `tradeify_lightning_50k.yaml`
 
+## CHANGE ALERT — 2026-08-25 — UNAPPROVED / NOT A VERIFICATION
+
+The daily official-source check at `2026-08-25T18:39:32.039836+00:00` again found the
+four pages reported on August 24 and additionally found that Tradeify's shared
+[Daily Loss Limit](https://help.tradeify.co/en/articles/10468321-rules-daily-loss-limit)
+page no longer matches the reviewed baseline. The distinct changed-page set is now five
+official pages. Per-profile results were Growth 2/9 changed, Lightning 2/10 changed, and
+Select 3/10 changed.
+
+This is fingerprint evidence only. It does not approve the page's current wording, infer
+a cohort rule, or replace the human-reviewed 2026-08-22 baseline. The checked-in profiles
+and source hashes were not changed. New append-only records, alerts, and empty unapproved
+proposals were written under `logs/`; all profiles remain stale and Stage 2+ remains
+blocked pending human review and a newly versioned, tested, explicitly approved baseline.
+
+## CHANGE ALERT — 2026-08-24 — UNAPPROVED / NOT A VERIFICATION
+
+The automated official-source check at `2026-08-24T23:35:50.533847+00:00` detected new
+content hashes on four official Tradeify pages:
+
+| Affected profile | Official page whose reviewed content changed |
+|---|---|
+| Growth 50K | [Growth Evaluation Accounts](https://help.tradeify.co/en/articles/10495915-growth-evaluation-accounts) |
+| Lightning 50K | [Lightning Funded Accounts](https://help.tradeify.co/en/articles/10495938-lightning-funded-accounts) |
+| Select 50K | [Select Evaluation Accounts](https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts) |
+| Select 50K | [Select Flex and Select Daily Payout Policies](https://help.tradeify.co/en/articles/12853966-select-flex-and-select-daily-payout-policies) |
+
+This check establishes only that the reviewed text changed. It does **not** establish what
+rule changed, approve a new interpretation, replace the human-reviewed 2026-08-22
+baseline, or authorize any profile edit. The three machine-readable profiles and
+`source_snapshots.yaml` intentionally remain unchanged and are now stale for Stage 2+.
+The rule matrix below remains the dated 2026-08-22 baseline for labelled Stage 0/1
+research only.
+
+Before any affected profile can be reconsidered, a human must review the new official
+text, resolve conflicts, create a new dated profile and source baseline, test the proposed
+change, and explicitly approve it. No live execution was enabled; all Stage 2+ execution
+remains fail-closed.
+
 This document records the firm's outer limits. They are not trading targets. The project's
 personal defaults—$200 maximum planned risk per trade, one trade per Tradeify session,
 $200 maximum daily strategy loss, and one open position—are deliberately much stricter.
@@ -199,6 +238,7 @@ The following official-source inconsistencies are recorded rather than silently 
   Actual account dashboard parameters must be captured; legacy profiles cannot be
   inferred.
 
-Result: the profiles are suitable for backtest, replay, paper risk modelling, and research.
-Automated Evaluation/Sim Funded execution remains fail-closed.
-
+Result: the unchanged profiles are retained only as the dated 2026-08-22 baseline for
+labelled backtest/replay research. The 2026-08-24 alert makes them stale for Stage 2+ until
+human review produces and approves a new version. Automated paper, Evaluation, Sim Funded,
+and live execution remain fail-closed.

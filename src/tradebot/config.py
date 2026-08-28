@@ -17,6 +17,7 @@ other environment mutation.
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import datetime, time
@@ -36,6 +37,18 @@ ENV_PREFIX = "TRADEBOT__"
 
 class ConfigError(ValueError):
     """Raised with a key path so the operator knows exactly what to fix."""
+
+
+def _finite_real(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+    )
+
+
+def _exact_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 # --------------------------------------------------------------------------------------
@@ -70,7 +83,7 @@ class SessionConfig:
             raise ConfigError(f"{path}.rth_start must be before rth_end")
         for key in ("entry_open_buffer_minutes", "entry_close_buffer_minutes",
                     "flatten_before_close_minutes"):
-            if getattr(self, key) < 0:
+            if not _exact_int(getattr(self, key)) or getattr(self, key) < 0:
                 raise ConfigError(f"{path}.{key} must be >= 0")
 
 
@@ -80,16 +93,33 @@ class PerTradeRisk:
     max_risk_per_trade_usd: float = 200.0
     max_contracts: int = 3
     min_contracts: int = 1
+    # A market intent is converted to a protective limit no farther than this many ticks
+    # from its signal reference. Missing the trade is preferable to unbounded gap risk.
+    max_entry_gap_ticks: float = 4.0
+    # Stop-market orders can fill through their trigger. Reserve this adverse gap in the
+    # planned all-in risk envelope; a larger real gap remains possible and triggers a
+    # post-trade safety halt rather than being misrepresented as guaranteed bounded loss.
+    max_stop_gap_ticks: float = 8.0
 
     def validate(self, path: str) -> None:
-        if not 0 < self.risk_pct_of_equity <= 100:
+        if not _finite_real(self.risk_pct_of_equity) or not 0 < self.risk_pct_of_equity <= 100:
             raise ConfigError(f"{path}.risk_pct_of_equity must be in (0, 100]")
-        if self.max_risk_per_trade_usd <= 0:
+        if not _finite_real(self.max_risk_per_trade_usd) or self.max_risk_per_trade_usd <= 0:
             raise ConfigError(f"{path}.max_risk_per_trade_usd must be positive")
-        if self.min_contracts < 1:
+        if not _exact_int(self.min_contracts) or self.min_contracts < 1:
             raise ConfigError(f"{path}.min_contracts must be >= 1")
-        if self.max_contracts < self.min_contracts:
+        if not _exact_int(self.max_contracts) or self.max_contracts < self.min_contracts:
             raise ConfigError(f"{path}.max_contracts must be >= min_contracts")
+        if (
+            not _finite_real(self.max_entry_gap_ticks)
+            or self.max_entry_gap_ticks < 0
+        ):
+            raise ConfigError(f"{path}.max_entry_gap_ticks must be finite and >= 0")
+        if (
+            not _finite_real(self.max_stop_gap_ticks)
+            or self.max_stop_gap_ticks < 0
+        ):
+            raise ConfigError(f"{path}.max_stop_gap_ticks must be finite and >= 0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,11 +129,11 @@ class DailyRisk:
     max_trades_per_day: int = 1
 
     def validate(self, path: str) -> None:
-        if self.max_daily_loss_usd <= 0:
+        if not _finite_real(self.max_daily_loss_usd) or self.max_daily_loss_usd <= 0:
             raise ConfigError(f"{path}.max_daily_loss_usd must be positive (it is a magnitude)")
-        if self.max_daily_loss_r <= 0:
+        if not _finite_real(self.max_daily_loss_r) or self.max_daily_loss_r <= 0:
             raise ConfigError(f"{path}.max_daily_loss_r must be positive (it is a magnitude)")
-        if self.max_trades_per_day < 1:
+        if not _exact_int(self.max_trades_per_day) or self.max_trades_per_day < 1:
             raise ConfigError(f"{path}.max_trades_per_day must be >= 1")
 
 
@@ -113,9 +143,9 @@ class StreakRisk:
     cooldown_minutes: int = 20
 
     def validate(self, path: str) -> None:
-        if self.max_consecutive_losses < 1:
+        if not _exact_int(self.max_consecutive_losses) or self.max_consecutive_losses < 1:
             raise ConfigError(f"{path}.max_consecutive_losses must be >= 1")
-        if self.cooldown_minutes < 0:
+        if not _exact_int(self.cooldown_minutes) or self.cooldown_minutes < 0:
             raise ConfigError(f"{path}.cooldown_minutes must be >= 0")
 
 
@@ -128,9 +158,9 @@ class DrawdownRisk:
     size_reduction_cushion_pct: float = 40.0
 
     def validate(self, path: str) -> None:
-        if not 0 < self.trailing_drawdown_pct <= 100:
+        if not _finite_real(self.trailing_drawdown_pct) or not 0 < self.trailing_drawdown_pct <= 100:
             raise ConfigError(f"{path}.trailing_drawdown_pct must be in (0, 100]")
-        if not 0 <= self.size_reduction_cushion_pct <= 100:
+        if not _finite_real(self.size_reduction_cushion_pct) or not 0 <= self.size_reduction_cushion_pct <= 100:
             raise ConfigError(f"{path}.size_reduction_cushion_pct must be in [0, 100]")
 
 
@@ -140,7 +170,7 @@ class KillSwitchConfig:
     max_consecutive_errors: int = 5
 
     def validate(self, path: str) -> None:
-        if self.max_consecutive_errors < 1:
+        if not _exact_int(self.max_consecutive_errors) or self.max_consecutive_errors < 1:
             raise ConfigError(f"{path}.max_consecutive_errors must be >= 1")
 
 
@@ -158,11 +188,11 @@ class RiskConfig:
     token_ttl_seconds: float = 60.0
 
     def validate(self, path: str) -> None:
-        if self.starting_equity_usd <= 0:
+        if not _finite_real(self.starting_equity_usd) or self.starting_equity_usd <= 0:
             raise ConfigError(f"{path}.starting_equity_usd must be positive")
-        if self.max_open_positions < 1:
+        if not _exact_int(self.max_open_positions) or self.max_open_positions < 1:
             raise ConfigError(f"{path}.max_open_positions must be >= 1")
-        if self.token_ttl_seconds <= 0:
+        if not _finite_real(self.token_ttl_seconds) or self.token_ttl_seconds <= 0:
             raise ConfigError(f"{path}.token_ttl_seconds must be positive")
         self.per_trade.validate(f"{path}.per_trade")
         self.daily.validate(f"{path}.daily")
@@ -178,11 +208,11 @@ class CostConfig:
     slippage_stress_multiplier: float = 2.0
 
     def validate(self, path: str) -> None:
-        if self.commission_round_trip_usd < 0:
+        if not _finite_real(self.commission_round_trip_usd) or self.commission_round_trip_usd < 0:
             raise ConfigError(f"{path}.commission_round_trip_usd must be >= 0")
-        if self.slippage_ticks_per_side < 0:
+        if not _finite_real(self.slippage_ticks_per_side) or self.slippage_ticks_per_side < 0:
             raise ConfigError(f"{path}.slippage_ticks_per_side must be >= 0")
-        if self.slippage_stress_multiplier < 1:
+        if not _finite_real(self.slippage_stress_multiplier) or self.slippage_stress_multiplier < 1:
             raise ConfigError(f"{path}.slippage_stress_multiplier must be >= 1")
 
 
@@ -196,9 +226,9 @@ class DataConfig:
     hard_stale_bar_multiple: float = 10.0
 
     def validate(self, path: str) -> None:
-        if self.stale_bar_multiple <= 1:
+        if not _finite_real(self.stale_bar_multiple) or self.stale_bar_multiple <= 1:
             raise ConfigError(f"{path}.stale_bar_multiple must be > 1")
-        if self.hard_stale_bar_multiple < self.stale_bar_multiple:
+        if not _finite_real(self.hard_stale_bar_multiple) or self.hard_stale_bar_multiple < self.stale_bar_multiple:
             raise ConfigError(f"{path}.hard_stale_bar_multiple must be >= stale_bar_multiple")
 
 
@@ -213,10 +243,12 @@ class SimulatedBrokerConfig:
     def validate(self, path: str) -> None:
         for key in ("reject_probability", "partial_fill_probability", "disconnect_probability"):
             value = getattr(self, key)
-            if not 0 <= value <= 1:
+            if not _finite_real(value) or not 0 <= value <= 1:
                 raise ConfigError(f"{path}.{key} must be in [0, 1]")
-        if self.latency_ms < 0:
+        if not _finite_real(self.latency_ms) or self.latency_ms < 0:
             raise ConfigError(f"{path}.latency_ms must be >= 0")
+        if not _exact_int(self.seed):
+            raise ConfigError(f"{path}.seed must be an integer")
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,7 +266,9 @@ class BrokerConfig:
             raise ConfigError(f"{path}.adapter must be 'simulated' or 'tradovate'")
         if self.environment not in ("demo", "live"):
             raise ConfigError(f"{path}.environment must be 'demo' or 'live'")
-        if self.max_retries < 0:
+        if not _finite_real(self.request_timeout_seconds) or self.request_timeout_seconds <= 0:
+            raise ConfigError(f"{path}.request_timeout_seconds must be positive")
+        if not _exact_int(self.max_retries) or self.max_retries < 0:
             raise ConfigError(f"{path}.max_retries must be >= 0")
         self.simulated.validate(f"{path}.simulated")
 
@@ -251,7 +285,7 @@ class DashboardConfig:
     port: int = 8787
 
     def validate(self, path: str) -> None:
-        if not 1 <= self.port <= 65535:
+        if not _exact_int(self.port) or not 1 <= self.port <= 65535:
             raise ConfigError(f"{path}.port must be a valid TCP port")
         if self.host not in ("127.0.0.1", "localhost", "::1"):
             # Binding a dashboard with a STOP button to a routable interface puts control
@@ -279,7 +313,7 @@ class PropFirmConfig:
             raise ConfigError(f"{path}.profile_path must not be empty")
         if not self.phase.strip():
             raise ConfigError(f"{path}.phase must not be empty")
-        if self.internal_safety_buffer_usd <= 0:
+        if not _finite_real(self.internal_safety_buffer_usd) or self.internal_safety_buffer_usd <= 0:
             raise ConfigError(f"{path}.internal_safety_buffer_usd must be positive")
 
         # Import lazily so the generic typed-config module stays usable even when a caller
@@ -304,7 +338,7 @@ class DeploymentConfig:
     approval_manifest: str = ""
 
     def validate(self, path: str) -> None:
-        if self.stage not in range(5):
+        if not _exact_int(self.stage) or self.stage not in range(5):
             raise ConfigError(f"{path}.stage must be one of 0, 1, 2, 3, 4")
         if self.stage >= 3:
             raise ConfigError(
@@ -438,15 +472,25 @@ def _coerce(raw: Any, target: Any, path: str) -> Any:
             return raw
         return str(raw).strip().lower() in ("1", "true", "yes", "on")
     if target is int:
+        if isinstance(raw, bool):
+            raise ConfigError(f"{path} must be an integer, got {raw!r}")
         try:
-            return int(raw)
+            value = int(raw)
         except (TypeError, ValueError) as exc:
             raise ConfigError(f"{path} must be an integer, got {raw!r}") from exc
+        if isinstance(raw, float) and (not math.isfinite(raw) or raw != value):
+            raise ConfigError(f"{path} must be an integer, got {raw!r}")
+        return value
     if target is float:
+        if isinstance(raw, bool):
+            raise ConfigError(f"{path} must be a finite number, got {raw!r}")
         try:
-            return float(raw)
+            value = float(raw)
         except (TypeError, ValueError) as exc:
             raise ConfigError(f"{path} must be a number, got {raw!r}") from exc
+        if not math.isfinite(value):
+            raise ConfigError(f"{path} must be a finite number, got {raw!r}")
+        return value
     if target is str:
         return str(raw)
     return raw
@@ -521,6 +565,7 @@ _PRODUCTION_UPPER_BOUNDS = {
     ("risk", "per_trade", "risk_pct_of_equity"),
     ("risk", "per_trade", "max_risk_per_trade_usd"),
     ("risk", "per_trade", "max_contracts"),
+    ("risk", "per_trade", "max_entry_gap_ticks"),
     ("risk", "daily", "max_daily_loss_usd"),
     ("risk", "daily", "max_daily_loss_r"),
     ("risk", "daily", "max_trades_per_day"),
@@ -531,6 +576,7 @@ _PRODUCTION_UPPER_BOUNDS = {
     ("data", "hard_stale_bar_multiple"),
 }
 _PRODUCTION_LOWER_BOUNDS = {
+    ("risk", "per_trade", "max_stop_gap_ticks"),
     ("risk", "per_trade", "min_contracts"),
     ("risk", "streaks", "cooldown_minutes"),
     ("risk", "drawdown", "size_reduction_cushion_pct"),

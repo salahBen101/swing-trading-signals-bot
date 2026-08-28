@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from ..config import SimulatedBrokerConfig
 from ..core.clock import Clock, SystemClock
 from ..core.models import Bar, Fill, Order, new_id
-from ..core.types import OrderStatus, OrderType, Side
+from ..core.types import OrderPurpose, OrderStatus, OrderType, Side, TimeInForce
 from ..instruments.registry import InstrumentSpec
 from .base import (
     BrokerAccount,
@@ -40,6 +40,16 @@ from .base import (
 from .costs import CostModel
 
 
+_RISK_REDUCING_PURPOSES = frozenset(
+    {
+        OrderPurpose.EXIT,
+        OrderPurpose.FLATTEN,
+        OrderPurpose.STOP,
+        OrderPurpose.TARGET,
+    }
+)
+
+
 @dataclass(slots=True)
 class _Working:
     order: Order
@@ -48,6 +58,7 @@ class _Working:
     releasable_at: datetime
     filled_quantity: int = 0
     average_fill_price: float = 0.0
+    last_fill_at: datetime | None = None
     status: OrderStatus = OrderStatus.SUBMITTED
     detail: str = ""
 
@@ -63,14 +74,21 @@ class _NetPosition:
 class SimulatedBroker:
     name = "simulated"
     is_paper = True
+    execution_route = "simulated-local-paper"
     # The simulator is itself the venue boundary: OCO and terminal cancellation are
-    # deterministic and synchronous there.  Its single-threaded match ordering also makes
-    # a market flatten close before resting protection is considered on that bar.
+    # deterministic and synchronous there. Its fill boundary also caps every privileged
+    # reducing order to the exact opposing position, so competing exits cannot reverse
+    # through flat.
     capabilities = BrokerCapabilities(
         external_execution=False,
         server_side_oco=True,
         reduce_only_or_close_position=True,
         authoritative_cancel_status=True,
+        exact_terminal_order_history=True,
+        # The in-memory venue does not yet persist a session fill cursor or an
+        # account-owner fencing generation across process restarts.
+        authoritative_session_execution_history=False,
+        account_owner_fencing=False,
     )
 
     def __init__(
@@ -188,7 +206,7 @@ class SimulatedBroker:
         return [*self.on_bar_open(bar), *self.on_bar_range(bar)]
 
     def on_bar_open(self, bar: Bar) -> list[BrokerEvent]:
-        """Fill market orders at this bar's open, and nothing else."""
+        """Fill market orders and already-marketable resting orders at the open."""
         self._last_price = bar.open
         return self._match_orders(bar, market_phase=True)
 
@@ -227,8 +245,6 @@ class SimulatedBroker:
             if working is None:
                 continue  # cancelled by an OCO sibling earlier in this same bar
             is_market = working.order.order_type is OrderType.MARKET
-            if is_market != market_phase:
-                continue
             group = working.order.oco_group
             if group is not None and group in touched_oco_groups:
                 # With an unknown intra-bar path, once the pessimistic stop side of an OCO
@@ -243,10 +259,51 @@ class SimulatedBroker:
             if bar.timestamp < working.releasable_at and not same_bar_protection:
                 continue  # still in flight: latency has not elapsed
 
+            if market_phase:
+                if not is_market and not self._executable_at_open(working.order, bar):
+                    if working.order.time_in_force is TimeInForce.IOC:
+                        produced.append(
+                            self._retire_ioc_order(
+                                working,
+                                detail="IOC entry was not executable at its first eligible open",
+                            )
+                        )
+                    continue
+            elif is_market or working.order.time_in_force is TimeInForce.IOC:
+                # IOC orders get exactly one venue opportunity at an eligible bar open.
+                # A later intrabar wick or future bar must never revive a stale setup.
+                continue
+            elif (
+                working.order.purpose is OrderPurpose.ENTRY
+                and working.last_fill_at == bar.timestamp
+            ):
+                # An entry remainder gets at most one venue match per bar. Otherwise a
+                # limit partially filled at the open could add again after its newly
+                # attached stop traded later in the same unknown OHLC path.
+                continue
+
             quote = self._fill_price(working.order, bar)
             if quote is None:
                 continue
             price, reference_price = quote
+
+            reduce_only_capacity = self._reduce_only_capacity(working.order)
+            if reduce_only_capacity == 0:
+                produced.append(
+                    self._retire_reduce_only_order(
+                        working,
+                        detail=(
+                            "reduce-only: no opposing exposure for "
+                            f"{working.order.side.name} {working.order.instrument}"
+                        ),
+                    )
+                )
+                if group is not None:
+                    touched_oco_groups.add(group)
+                produced.extend(
+                    self._cancel_oco_siblings(working, reduce_only_terminal=True)
+                )
+                continue
 
             remaining = working.order.quantity - working.filled_quantity
             quantity = remaining
@@ -254,6 +311,10 @@ class SimulatedBroker:
             if remaining > 1 and self._rng.random() < self.config.partial_fill_probability:
                 quantity = max(1, remaining // 2)
                 partial = True
+
+            if reduce_only_capacity is not None:
+                quantity = min(quantity, reduce_only_capacity)
+                partial = quantity < remaining
 
             produced.append(
                 self._book_fill(
@@ -265,10 +326,98 @@ class SimulatedBroker:
                     partial,
                 )
             )
+
+            if (
+                working.order.time_in_force is TimeInForce.IOC
+                and working.status.is_working
+            ):
+                produced.append(
+                    self._retire_ioc_order(
+                        working,
+                        detail="IOC unfilled remainder cancelled after its first match",
+                    )
+                )
+
+            reduce_only_terminal = False
+            if (
+                reduce_only_capacity is not None
+                and self._position.quantity == 0
+                and working.status.is_working
+            ):
+                produced.append(
+                    self._retire_reduce_only_order(
+                        working,
+                        detail="reduce-only: unfilled remainder cancelled at flat",
+                    )
+                )
+                reduce_only_terminal = True
             if group is not None:
                 touched_oco_groups.add(group)
-            produced.extend(self._cancel_oco_siblings(working))
+            produced.extend(
+                self._cancel_oco_siblings(
+                    working,
+                    reduce_only_terminal=reduce_only_terminal,
+                )
+            )
         return produced
+
+    def _retire_ioc_order(self, working: _Working, *, detail: str) -> BrokerEvent:
+        """Terminally cancel an IOC order or its unfilled remainder."""
+        self._working.pop(working.broker_order_id, None)
+        working.status = OrderStatus.CANCELLED
+        working.detail = detail
+        self._history[working.broker_order_id] = working
+        return self._emit(
+            EventKind.CANCELLED,
+            order_id=working.order.order_id,
+            broker_order_id=working.broker_order_id,
+            detail=detail,
+        )
+
+    @staticmethod
+    def _executable_at_open(order: Order, bar: Bar) -> bool:
+        if order.order_type is OrderType.LIMIT:
+            return (
+                bar.open <= order.limit_price
+                if order.side is Side.BUY
+                else bar.open >= order.limit_price
+            )
+        if order.order_type in (OrderType.STOP, OrderType.STOP_LIMIT):
+            return (
+                bar.open >= order.stop_price
+                if order.side is Side.BUY
+                else bar.open <= order.stop_price
+            )
+        return False
+
+    def _reduce_only_capacity(self, order: Order) -> int | None:
+        """Return the exact quantity this order can close, or ``None`` for an entry.
+
+        Purpose, instrument, side, and the venue's current signed position all participate
+        in the decision. A privileged risk-reducing order can never add exposure: zero
+        means it has no opposing position to close and must terminate without a fill.
+        """
+        if order.purpose not in _RISK_REDUCING_PURPOSES:
+            return None
+        position = self._position
+        if order.instrument != position.instrument or position.quantity == 0:
+            return 0
+        if position.quantity * int(order.side) >= 0:
+            return 0
+        return abs(position.quantity)
+
+    def _retire_reduce_only_order(self, working: _Working, *, detail: str) -> BrokerEvent:
+        """Cancel a reducing order whose remaining quantity cannot legally fill."""
+        self._working.pop(working.broker_order_id, None)
+        working.status = OrderStatus.CANCELLED
+        working.detail = detail
+        self._history[working.broker_order_id] = working
+        return self._emit(
+            EventKind.CANCELLED,
+            order_id=working.order.order_id,
+            broker_order_id=working.broker_order_id,
+            detail=detail,
+        )
 
     def _fill_price(self, order: Order, bar: Bar) -> tuple[float, float] | None:
         """Return ``(fill, benchmark)`` or ``None`` when the order does not fill.
@@ -338,6 +487,7 @@ class SimulatedBroker:
             (working.average_fill_price * working.filled_quantity + price * quantity) / total
         )
         working.filled_quantity = total
+        working.last_fill_at = ts
 
         self._apply_to_position(fill)
         self._cash -= commission
@@ -357,15 +507,23 @@ class SimulatedBroker:
             detail=f"{quantity} @ {price}",
         )
 
-    def _cancel_oco_siblings(self, filled: _Working) -> list[BrokerEvent]:
+    def _cancel_oco_siblings(
+        self,
+        filled: _Working,
+        *,
+        reduce_only_terminal: bool = False,
+    ) -> list[BrokerEvent]:
         """Cancel the other side of a one-cancels-other pair once one side is done.
 
         Only a *completed* order cancels its sibling: a partial fill on the stop leaves the
         target working against the remaining contracts, which is the correct behaviour and
-        the one a real venue implements.
+        the one a real venue implements. A reduce-only order retired at flat is also
+        complete for OCO purposes, even when its original quantity exceeded the position.
         """
         group = filled.order.oco_group
-        if group is None or filled.status is not OrderStatus.FILLED:
+        if group is None or (
+            filled.status is not OrderStatus.FILLED and not reduce_only_terminal
+        ):
             return []
 
         events = []

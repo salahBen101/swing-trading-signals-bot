@@ -48,6 +48,8 @@ risk:
     max_risk_per_trade_usd: 200.0
     max_contracts: 3
     min_contracts: 1
+    max_entry_gap_ticks: 4.0 # market intents become bounded limits; no unbounded gap entry
+    max_stop_gap_ticks: 8.0 # planned reserve only; larger stop gaps remain possible
 
   daily:
     max_daily_loss_usd: 200.0

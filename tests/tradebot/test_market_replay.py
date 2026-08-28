@@ -106,7 +106,9 @@ def replay_config() -> Config:
             starting_equity_usd=50_000.0,
             max_open_positions=1,
             per_trade=PerTradeRisk(
-                risk_pct_of_equity=0.375,
+                # Permit one contract after the production stop-gap, fees, and
+                # stressed-exit reserves are included in the all-in envelope.
+                risk_pct_of_equity=0.4,
                 max_risk_per_trade_usd=200.0,
                 max_contracts=3,
                 min_contracts=1,

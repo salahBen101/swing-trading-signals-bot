@@ -49,6 +49,7 @@ class VolatilityTargetSizer:
         *,
         equity: float,
         stop_distance_points: float,
+        fixed_risk_per_contract_usd: float = 0.0,
         cushion_fraction: float = 1.0,
         cushion_threshold: float = 0.4,
     ) -> SizingResult:
@@ -61,14 +62,28 @@ class VolatilityTargetSizer:
                 "stop distance is zero; risk per contract would be undefined",
             )
 
-        budget = min(equity * (cfg.risk_pct_of_equity / 100.0), cfg.max_risk_per_trade_usd)
+        budget, throttle = self.risk_budget(
+            equity=equity,
+            cushion_fraction=cushion_fraction,
+            cushion_threshold=cushion_threshold,
+        )
 
-        throttle = 1.0
-        if cushion_threshold > 0 and cushion_fraction < cushion_threshold:
-            throttle = max(0.0, cushion_fraction / cushion_threshold)
-            budget *= throttle
+        if (
+            isinstance(fixed_risk_per_contract_usd, bool)
+            or not isinstance(fixed_risk_per_contract_usd, (int, float))
+            or not math.isfinite(fixed_risk_per_contract_usd)
+            or fixed_risk_per_contract_usd < 0
+        ):
+            return SizingResult(
+                0, 0.0, 0.0, budget, throttle,
+                RejectReason.INVALID_ORDER,
+                "fixed per-contract costs must be finite and non-negative",
+            )
 
-        risk_per_contract = stop_distance_points * self.instrument.multiplier
+        risk_per_contract = (
+            stop_distance_points * self.instrument.multiplier
+            + fixed_risk_per_contract_usd
+        )
         if risk_per_contract <= 0:
             return SizingResult(
                 0, 0.0, 0.0, budget, throttle,
@@ -94,3 +109,23 @@ class VolatilityTargetSizer:
             budget_usd=budget,
             throttle=throttle,
         )
+
+    def risk_budget(
+        self,
+        *,
+        equity: float,
+        cushion_fraction: float = 1.0,
+        cushion_threshold: float = 0.4,
+    ) -> tuple[float, float]:
+        """Return the current dollar budget and drawdown-cushion throttle."""
+
+        cfg = self.config
+        budget = min(
+            equity * (cfg.risk_pct_of_equity / 100.0),
+            cfg.max_risk_per_trade_usd,
+        )
+        throttle = 1.0
+        if cushion_threshold > 0 and cushion_fraction < cushion_threshold:
+            throttle = max(0.0, cushion_fraction / cushion_threshold)
+            budget *= throttle
+        return max(0.0, budget), throttle

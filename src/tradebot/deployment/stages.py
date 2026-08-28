@@ -24,7 +24,14 @@ from typing import Any
 import yaml
 
 from ..prop_firms.models import AccountPhase, PropFirmProfile
-from ..prop_firms.verification import RuleVerificationResult, VerificationStatus
+from ..prop_firms.loader import load_prop_profile
+from ..prop_firms.verification import (
+    RuleVerificationResult,
+    SourceCheck,
+    VerificationStatus,
+    load_source_baselines,
+    verify_profile_sources,
+)
 
 
 class DeploymentStage(IntEnum):
@@ -46,6 +53,7 @@ class StageManifestError(ValueError):
 _AUTHORIZATION_TTL = timedelta(minutes=5)
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 _GIT_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_AUTHORIZATION_ID = re.compile(r"^[0-9a-f]{32}$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,11 +79,23 @@ class ApprovalManifest:
     notes: str = ""
 
     def validate(self) -> None:
-        if self.schema_version != 1:
+        if type(self.schema_version) is not int or self.schema_version != 1:
             raise StageManifestError(f"unsupported approval manifest version {self.schema_version}")
-        if self.stage < DeploymentStage.PROP_EVALUATION:
+        if (
+            type(self.stage) is not DeploymentStage
+            or self.stage < DeploymentStage.PROP_EVALUATION
+        ):
             raise StageManifestError("approval manifests are only valid for Stage 3 or Stage 4")
-        if self.approved_at.tzinfo is None or self.approved_at.utcoffset() is None:
+        for name in (
+            "approved",
+            "execution_route_verified",
+            "sole_owner_attested",
+            "firm_exclusive_use_attested",
+            "production_frozen",
+        ):
+            if type(getattr(self, name)) is not bool:
+                raise StageManifestError(f"{name} must be true or false")
+        if not _exact_aware_datetime(self.approved_at):
             raise StageManifestError("approved_at must be timezone-aware")
         for name in (
             "approved_by", "account_id", "prop_profile_id", "prop_phase",
@@ -83,17 +103,20 @@ class ApprovalManifest:
             "strategy_artifact_sha256",
             "code_revision", "execution_route",
         ):
-            if not str(getattr(self, name)).strip():
+            value = getattr(self, name)
+            if type(value) is not str or not value.strip():
                 raise StageManifestError(f"{name} must not be empty")
         for name in (
             "prop_profile_sha256", "source_snapshot_sha256", "runtime_config_sha256",
             "strategy_artifact_sha256",
         ):
-            value = str(getattr(self, name))
+            value = getattr(self, name)
             if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value.lower()):
                 raise StageManifestError(f"{name} must be a SHA-256 hex digest")
         if not _GIT_REVISION.fullmatch(self.code_revision.casefold()):
             raise StageManifestError("code_revision must be a full 40-character git commit")
+        if type(self.notes) is not str:
+            raise StageManifestError("notes must be a string")
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,6 +160,7 @@ class _AuthorizationEnvironment:
     now: datetime
     code_revision: str
     working_tree_clean: bool
+    error: str = ""
 
 
 def normalize_execution_route(value: str) -> str:
@@ -232,15 +256,183 @@ class _StageAuthorizationAuthority:
         return replace(authorization, _signature=signature)
 
     def authentic(self, authorization: StageAuthorization) -> bool:
-        expected = hmac.new(
-            self.__secret,
-            _canonical_json(_authorization_payload(authorization)),
-            hashlib.sha256,
-        ).hexdigest()
-        return hmac.compare_digest(expected, authorization._signature or "")
+        try:
+            expected = hmac.new(
+                self.__secret,
+                _canonical_json(_authorization_payload(authorization)),
+                hashlib.sha256,
+            ).hexdigest()
+            return hmac.compare_digest(expected, authorization._signature or "")
+        except Exception:
+            # Corrupt or hostile runtime objects are denial inputs, not process crashes.
+            return False
 
 
 _AUTHORITY = _StageAuthorizationAuthority()
+
+
+def stage_authorization_failure_codes(
+    authorization: StageAuthorization,
+    *,
+    stage: DeploymentStage,
+    as_of: datetime,
+) -> tuple[str, ...]:
+    """Return fail-closed validation codes for a Stage 3/4 capability.
+
+    ``StageAuthorization`` stays public because Stage 0-2 use it as a plain decision
+    envelope.  A live-stage instance is permission only when :func:`authorize_stage`
+    minted it in this process, its authenticated claims remain unmodified, and its short
+    validity window is still open.
+    """
+    try:
+        stage = DeploymentStage(stage)
+    except (TypeError, ValueError):
+        return ("stage_authorization_expected_stage_invalid",)
+    if stage <= DeploymentStage.PAPER:
+        return ()
+
+    failures: list[str] = []
+    if not isinstance(authorization, StageAuthorization):
+        return ("stage_authorization_invalid",)
+    if not _exact_aware_datetime(as_of):
+        return ("stage_authorization_check_time_invalid",)
+    if authorization.stage is not stage:
+        failures.append("stage_authorization_mismatch")
+    if authorization.allowed is not True:
+        failures.append("stage_authorization_denied")
+    if not isinstance(authorization.account_id, str) or not authorization.account_id.strip():
+        failures.append("stage_authorized_account_missing")
+    if (
+        not isinstance(authorization.execution_route, str)
+        or not authorization.execution_route.strip()
+    ):
+        failures.append("stage_authorized_route_missing")
+
+    required_text = (
+        authorization.account_id,
+        authorization.execution_route,
+        authorization.profile_id,
+        authorization.prop_phase,
+        authorization.manifest_sha256,
+        authorization.prop_profile_sha256,
+        authorization.source_snapshot_sha256,
+        authorization.runtime_config_sha256,
+        authorization.strategy_artifact_sha256,
+        authorization.code_revision,
+        authorization.rule_verification_sha256,
+        authorization.authorization_id,
+    )
+    timestamps = (
+        authorization.rule_verification_checked_at,
+        authorization.issued_at,
+        authorization.expires_at,
+    )
+    malformed = (
+        type(authorization.stage) is not DeploymentStage
+        or type(authorization.allowed) is not bool
+        or type(authorization.reasons) is not tuple
+        or any(type(reason) is not str for reason in authorization.reasons)
+        or any(type(value) is not str or not value.strip() for value in required_text)
+        or any(not _exact_aware_datetime(value) for value in timestamps)
+        or any(
+            not _SHA256_HEX.fullmatch(str(value).casefold())
+            for value in (
+                authorization.manifest_sha256,
+                authorization.prop_profile_sha256,
+                authorization.source_snapshot_sha256,
+                authorization.runtime_config_sha256,
+                authorization.strategy_artifact_sha256,
+                authorization.rule_verification_sha256,
+            )
+        )
+        or not _GIT_REVISION.fullmatch(str(authorization.code_revision).casefold())
+        or type(authorization._signature) is not str
+        or not _SHA256_HEX.fullmatch(str(authorization._signature).casefold())
+        or not _AUTHORIZATION_ID.fullmatch(str(authorization.authorization_id).casefold())
+    )
+    if malformed:
+        failures.append("stage_authorization_malformed")
+        # The canonical payload cannot safely be built from malformed timestamps.  It is
+        # also, by definition, not an authenticated capability.
+        failures.append("stage_authorization_unauthenticated")
+        return tuple(dict.fromkeys(failures))
+
+    assert authorization.issued_at is not None
+    assert authorization.expires_at is not None
+    assert authorization.rule_verification_checked_at is not None
+    try:
+        if authorization.expires_at - authorization.issued_at != _AUTHORIZATION_TTL:
+            failures.append("stage_authorization_malformed")
+        if authorization.rule_verification_checked_at > authorization.issued_at:
+            failures.append("stage_authorization_malformed")
+        if authorization.issued_at > as_of:
+            failures.append("stage_authorization_not_yet_valid")
+        if authorization.expires_at <= as_of:
+            failures.append("stage_authorization_expired")
+    except Exception:
+        failures.extend(
+            ("stage_authorization_malformed", "stage_authorization_unauthenticated")
+        )
+        return tuple(dict.fromkeys(failures))
+    if not _AUTHORITY.authentic(authorization):
+        failures.append("stage_authorization_unauthenticated")
+    return tuple(dict.fromkeys(failures))
+
+
+def _exact_aware_datetime(value: Any) -> bool:
+    if type(value) is not datetime:
+        return False
+    try:
+        return value.tzinfo is not None and value.utcoffset() is not None
+    except Exception:
+        return False
+
+
+def _read_authorization_environment() -> _AuthorizationEnvironment:
+    """Derive live-stage time and repository truth without trusting the caller."""
+    now = datetime.now(timezone.utc)
+    repository = Path(__file__).resolve().parents[3]
+
+    def run_git(*arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", "-C", str(repository), *arguments],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+
+    try:
+        revision_result = run_git("rev-parse", "HEAD")
+        status_result = run_git("status", "--porcelain=v1", "--untracked-files=normal")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return _AuthorizationEnvironment(
+            now,
+            "",
+            False,
+            f"could not inspect repository state: {type(exc).__name__}",
+        )
+
+    revision = revision_result.stdout.strip().casefold()
+    if revision_result.returncode != 0 or not _GIT_REVISION.fullmatch(revision):
+        return _AuthorizationEnvironment(
+            now,
+            "",
+            False,
+            "could not derive the current git revision",
+        )
+    if status_result.returncode != 0:
+        return _AuthorizationEnvironment(
+            now,
+            revision,
+            False,
+            "could not derive the current working-tree state",
+        )
+    return _AuthorizationEnvironment(
+        now=now,
+        code_revision=revision,
+        working_tree_clean=not bool(status_result.stdout.strip()),
+    )
 
 
 _MANIFEST_KEYS = {
@@ -302,32 +494,80 @@ def load_approval_manifest(path: str | Path) -> ApprovalManifest:
 
 
 def artifact_sha256(path: str | Path) -> str:
-    artifact = Path(path)
-    if not artifact.is_file():
-        raise StageManifestError(f"pinned artifact not found: {artifact}")
-    return hashlib.sha256(artifact.read_bytes()).hexdigest()
+    try:
+        artifact = Path(path)
+        if not artifact.is_file():
+            raise StageManifestError(f"pinned artifact not found: {artifact}")
+        return hashlib.sha256(artifact.read_bytes()).hexdigest()
+    except StageManifestError:
+        raise
+    except (OSError, TypeError, ValueError) as exc:
+        raise StageManifestError("pinned artifact could not be read") from exc
+
+
+def _load_authorization_profile(path: str | Path) -> PropFirmProfile:
+    """Load the exact pinned profile; callers cannot substitute an in-memory variant."""
+    return load_prop_profile(path)
+
+
+def _run_authorization_rule_verification(
+    profile: PropFirmProfile,
+    source_snapshot_path: str | Path,
+    *,
+    checked_at: datetime,
+) -> RuleVerificationResult:
+    """Fetch every official source against the exact pinned reviewed baselines."""
+    baselines = load_source_baselines(source_snapshot_path)
+    return verify_profile_sources(profile, baselines, checked_at=checked_at)
+
+
+def _rule_verification_structure_error(result: object) -> str | None:
+    if type(result) is not RuleVerificationResult:
+        return "official-source verification result is missing or invalid"
+    if type(result.profile_id) is not str or not result.profile_id.strip():
+        return "official-source verification profile id is invalid"
+    if not _exact_aware_datetime(result.checked_at):
+        return "official-source verification timestamp is not timezone-aware"
+    if type(result.status) is not VerificationStatus:
+        return "official-source verification status is invalid"
+    if type(result.checks) is not tuple:
+        return "official-source verification checks are not an immutable tuple"
+    for check in result.checks:
+        if type(check) is not SourceCheck:
+            return "official-source verification contains an invalid check"
+        if type(check.url) is not str or not check.url.startswith("https://"):
+            return "official-source verification contains an invalid URL"
+        if type(check.changed) is not bool or type(check.error) is not str:
+            return "official-source verification contains invalid check flags"
+        for digest in (check.expected_sha256, check.observed_sha256):
+            if digest is not None and (
+                type(digest) is not str
+                or not _SHA256_HEX.fullmatch(digest.casefold())
+            ):
+                return "official-source verification contains an invalid digest"
+    return None
 
 
 def authorize_stage(
     stage: DeploymentStage,
     *,
     as_of: datetime,
-    profile: PropFirmProfile | None = None,
     profile_path: str | Path | None = None,
     source_snapshot_path: str | Path | None = None,
     runtime_config_path: str | Path | None = None,
     strategy_artifact_path: str | Path | None = None,
     manifest: ApprovalManifest | None = None,
-    rule_verification: RuleVerificationResult | None = None,
-    code_revision: str = "",
-    working_tree_clean: bool = False,
 ) -> StageAuthorization:
     """Evaluate stage permission without mutating external state.
 
     The runner must call this again on every Stage 3/4 startup.  A prior success is not a
     durable permission because official-rule freshness and repository state can change.
     """
-    if as_of.tzinfo is None or as_of.utcoffset() is None:
+    try:
+        stage = DeploymentStage(stage)
+    except (TypeError, ValueError) as exc:
+        raise StageManifestError("deployment stage is invalid") from exc
+    if not _exact_aware_datetime(as_of):
         return StageAuthorization(stage, False, ("authorization time is not timezone-aware",))
     if stage <= DeploymentStage.PAPER:
         return StageAuthorization(stage, True, ())
@@ -335,17 +575,41 @@ def authorize_stage(
     reasons: list[str] = []
     if manifest is None:
         return StageAuthorization(stage, False, ("Stage 3/4 requires a human approval manifest",))
+    if type(manifest) is not ApprovalManifest:
+        return StageAuthorization(stage, False, ("Stage 3/4 approval manifest is invalid",))
 
-    manifest_identity_valid = False
+    try:
+        environment = _read_authorization_environment()
+    except Exception as exc:
+        return StageAuthorization(
+            stage,
+            False,
+            (f"could not inspect authorization environment: {type(exc).__name__}",),
+        )
+    if type(environment) is not _AuthorizationEnvironment:
+        return StageAuthorization(stage, False, ("authorization environment is invalid",))
+    if not _exact_aware_datetime(environment.now):
+        return StageAuthorization(
+            stage,
+            False,
+            ("authorization environment returned an invalid current time",),
+        )
+    as_of = environment.now
+    code_revision = environment.code_revision
+    working_tree_clean = environment.working_tree_clean
+    if environment.error:
+        reasons.append(environment.error)
+
     try:
         manifest.validate()
-        manifest_identity_valid = True
     except StageManifestError as exc:
-        reasons.append(str(exc))
+        return StageAuthorization(stage, False, (str(exc),))
     if manifest.stage is not stage:
         reasons.append(f"manifest authorizes Stage {int(manifest.stage)}, not Stage {int(stage)}")
     if not manifest.approved:
         reasons.append("human approval flag is false")
+    if manifest.approved_at > as_of:
+        reasons.append("human approval timestamp is in the future")
     if not manifest.execution_route_verified:
         reasons.append("execution route has not been independently verified")
     if not manifest.sole_owner_attested:
@@ -358,68 +622,6 @@ def authorize_stage(
         reasons.append("working tree is not clean")
     if not code_revision or manifest.code_revision != code_revision:
         reasons.append("code revision does not match the approved manifest")
-
-    if profile is None:
-        reasons.append("no prop-firm profile selected")
-    else:
-        if manifest.prop_profile_id != profile.profile_id:
-            reasons.append("selected prop profile id differs from the approved manifest")
-        if not profile.rules_are_fresh(as_of):
-            reasons.append("official prop rules are stale and require reverification")
-        if profile.ambiguity_notes:
-            reasons.append("prop profile contains unresolved rule conflicts")
-        try:
-            rules = profile.rules_for(manifest.prop_phase)
-        except KeyError:
-            reasons.append(f"approved prop phase {manifest.prop_phase!r} is not in the profile")
-        else:
-            expected = AccountPhase.EVALUATION if stage is DeploymentStage.PROP_EVALUATION else None
-            if expected is not None and rules.phase is not expected:
-                reasons.append("Stage 3 requires an evaluation-phase rule set")
-            if stage is DeploymentStage.FUNDED and rules.phase not in (AccountPhase.SIM_FUNDED, AccountPhase.LIVE):
-                reasons.append("Stage 4 requires a funded-phase rule set")
-            if (
-                profile.firm.casefold() == "tradeify"
-                and rules.phase in (AccountPhase.EVALUATION, AccountPhase.SIM_FUNDED)
-                and "tradovate" in manifest.execution_route.casefold()
-                and "api" in manifest.execution_route.casefold()
-            ):
-                reasons.append("Tradeify does not permit Tradovate API access for Evaluation/Sim Funded")
-
-        if rule_verification is None:
-            reasons.append("no current official-source verification result was supplied")
-        else:
-            if rule_verification.profile_id != profile.profile_id:
-                reasons.append("official-source verification belongs to a different profile")
-            if rule_verification.status is not VerificationStatus.UNCHANGED:
-                reasons.append(
-                    f"official-source verification is {rule_verification.status.value}, not unchanged"
-                )
-            if (
-                rule_verification.checked_at.tzinfo is None
-                or rule_verification.checked_at.utcoffset() is None
-            ):
-                reasons.append("official-source verification timestamp is not timezone-aware")
-            else:
-                if rule_verification.checked_at > as_of:
-                    reasons.append("official-source verification timestamp is in the future")
-                elif as_of - rule_verification.checked_at > timedelta(
-                    hours=profile.reverify_after_hours
-                ):
-                    reasons.append("official-source verification is stale")
-            expected_urls = {source.url for source in profile.sources}
-            checked_urls = {check.url for check in rule_verification.checks}
-            if checked_urls != expected_urls:
-                reasons.append("official-source verification does not cover every profile source")
-            if any(
-                check.changed
-                or bool(check.error)
-                or check.expected_sha256 is None
-                or check.observed_sha256 is None
-                or check.expected_sha256 != check.observed_sha256
-                for check in rule_verification.checks
-            ):
-                reasons.append("official-source verification contains changed or incomplete checks")
 
     pinned = (
         ("prop profile", profile_path, manifest.prop_profile_sha256),
@@ -439,10 +641,121 @@ def authorize_stage(
         if actual != expected_hash:
             reasons.append(f"{label} hash differs from the approved manifest")
 
-    return StageAuthorization(
-        stage,
-        not reasons,
-        tuple(reasons),
-        account_id=(manifest.account_id if manifest_identity_valid else None),
-        execution_route=(manifest.execution_route if manifest_identity_valid else None),
+    profile: PropFirmProfile | None = None
+    if profile_path is not None and not any(
+        reason.startswith("prop profile ") or reason == "pinned artifact could not be read"
+        for reason in reasons
+    ):
+        try:
+            profile = _load_authorization_profile(profile_path)
+            if type(profile) is not PropFirmProfile:
+                raise TypeError("profile loader returned an invalid object")
+            profile.validate()
+        except Exception as exc:
+            reasons.append(f"pinned prop profile could not be loaded: {type(exc).__name__}")
+
+    if profile is not None:
+        if manifest.prop_profile_id != profile.profile_id:
+            reasons.append("selected prop profile id differs from the approved manifest")
+        if not profile.rules_are_fresh(as_of):
+            reasons.append("official prop rules are stale and require reverification")
+        if profile.ambiguity_notes:
+            reasons.append("prop profile contains unresolved rule conflicts")
+        try:
+            rules = profile.rules_for(manifest.prop_phase)
+        except KeyError:
+            reasons.append(f"approved prop phase {manifest.prop_phase!r} is not in the profile")
+        else:
+            expected = AccountPhase.EVALUATION if stage is DeploymentStage.PROP_EVALUATION else None
+            if expected is not None and rules.phase is not expected:
+                reasons.append("Stage 3 requires an evaluation-phase rule set")
+            if stage is DeploymentStage.FUNDED and rules.phase not in (
+                AccountPhase.SIM_FUNDED,
+                AccountPhase.LIVE,
+            ):
+                reasons.append("Stage 4 requires a funded-phase rule set")
+            if (
+                profile.firm.casefold() == "tradeify"
+                and rules.phase in (AccountPhase.EVALUATION, AccountPhase.SIM_FUNDED)
+                and "tradovate" in manifest.execution_route.casefold()
+                and "api" in manifest.execution_route.casefold()
+            ):
+                reasons.append(
+                    "Tradeify does not permit Tradovate API access for Evaluation/Sim Funded"
+                )
+
+    rule_verification: RuleVerificationResult | None = None
+    # Do not make a network request when another immutable prerequisite already denies
+    # startup.  A clean candidate must perform the fetch in this call immediately before
+    # its short-lived capability is minted.
+    if not reasons and profile is not None and source_snapshot_path is not None:
+        try:
+            candidate = _run_authorization_rule_verification(
+                profile,
+                source_snapshot_path,
+                checked_at=as_of,
+            )
+        except Exception as exc:
+            reasons.append(f"official-source verification failed: {type(exc).__name__}")
+        else:
+            structure_error = _rule_verification_structure_error(candidate)
+            if structure_error is not None:
+                reasons.append(structure_error)
+            else:
+                rule_verification = candidate
+
+    if rule_verification is not None and profile is not None:
+        if rule_verification.profile_id != profile.profile_id:
+            reasons.append("official-source verification belongs to a different profile")
+        if rule_verification.status is not VerificationStatus.UNCHANGED:
+            reasons.append(
+                f"official-source verification is {rule_verification.status.value}, not unchanged"
+            )
+        if rule_verification.checked_at > as_of:
+            reasons.append("official-source verification timestamp is in the future")
+        elif as_of - rule_verification.checked_at > timedelta(
+            hours=profile.reverify_after_hours
+        ):
+            reasons.append("official-source verification is stale")
+        expected_urls = {source.url for source in profile.sources}
+        checked_urls = {check.url for check in rule_verification.checks}
+        if checked_urls != expected_urls:
+            reasons.append("official-source verification does not cover every profile source")
+        if any(
+            check.changed
+            or bool(check.error)
+            or check.expected_sha256 is None
+            or check.observed_sha256 is None
+            or check.expected_sha256 != check.observed_sha256
+            for check in rule_verification.checks
+        ):
+            reasons.append("official-source verification contains changed or incomplete checks")
+
+    if reasons:
+        # A denial is evidence, never a capability. Do not expose a partly validated
+        # identity to code that might accidentally key only on its presence.
+        return StageAuthorization(stage, False, tuple(reasons))
+
+    assert profile is not None
+    assert rule_verification is not None
+    authorization = StageAuthorization(
+        stage=stage,
+        allowed=True,
+        reasons=(),
+        account_id=manifest.account_id,
+        execution_route=normalize_execution_route(manifest.execution_route),
+        profile_id=profile.profile_id,
+        prop_phase=manifest.prop_phase,
+        manifest_sha256=approval_manifest_sha256(manifest),
+        prop_profile_sha256=manifest.prop_profile_sha256,
+        source_snapshot_sha256=manifest.source_snapshot_sha256,
+        runtime_config_sha256=manifest.runtime_config_sha256,
+        strategy_artifact_sha256=manifest.strategy_artifact_sha256,
+        code_revision=code_revision,
+        rule_verification_sha256=rule_verification_sha256(rule_verification),
+        rule_verification_checked_at=rule_verification.checked_at,
+        issued_at=as_of,
+        expires_at=as_of + _AUTHORIZATION_TTL,
+        authorization_id=secrets.token_hex(16),
     )
+    return _AUTHORITY.mint(authorization)

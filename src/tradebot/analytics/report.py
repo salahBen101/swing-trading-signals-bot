@@ -130,14 +130,16 @@ def text_report(
 
     add("")
     add("EVIDENCE")
+    bar = selection_bar(metrics.configurations_tried)
     if metrics.t_statistic is None:
         add("  t-statistic         n/a (too few trades)")
+        outcome = "NOT ASSESSABLE"
     else:
-        bar = selection_bar(metrics.configurations_tried)
         verdict = "CLEARS" if metrics.clears_selection_bar else "does NOT clear"
+        outcome = f"{verdict} it"
         add(f"  t-statistic         {metrics.t_statistic:+.2f}")
-        add(f"  configurations      {metrics.configurations_tried}")
-        add(f"  selection bar       t >= {bar:.2f}  ->  {verdict} it")
+    add(f"  configurations      {metrics.configurations_tried}")
+    add(f"  selection bar       t >= {bar:.2f}  ->  {outcome}")
     add("")
     add("  Prior: thirteen intraday NQ strategy families and well over a hundred")
     add("  configurations have been tested in this repository, and none survived")

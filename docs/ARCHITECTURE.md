@@ -35,6 +35,13 @@ expired, replayed, stale, already-exposed, or outcome-unknown entries fail close
 protective-stop authorizations have separate typed purposes so an entry-only rule cannot
 trap exposure.
 
+Quantity is derived from all-in bounded risk. A market intent is converted to a protective
+limit no farther than the configured entry-gap allowance. Per-contract risk is measured
+from that worst signed entry to the stop, then adds round-trip commission and stressed
+exit slippage before flooring and capping quantity. STOP and STOP_LIMIT entries are not
+accepted because their entry risk is unbounded. This is a conservative planning bound,
+not a guarantee against a later market gap through the protective stop.
+
 No module is a substitute for the others:
 
 | layer | owns | does not own |
@@ -86,16 +93,25 @@ strategy asks for one.
 |---:|---|---|
 | 0 | historical backtest | yes |
 | 1 | market replay | yes |
-| 2 | paper/demo | yes |
+| 2 | paper/demo | only after the adapter proves the complete recovery capability set; no shipped adapter does |
 | 3 | prop evaluation | no |
 | 4 | funded/sim-funded/live | no |
 
-Stage 3/4 startup requires a human-created manifest that pins the account, profile phase,
-profile hash, official-source snapshot hash, runtime configuration, strategy artifact,
-code revision, execution route, and ownership/exclusivity attestations. The repository
-must be clean; official-source verification must be complete, current, and unchanged; and
-profiles with unresolved ambiguity notes are refused. The supplied configuration is Stage
-0 and the example manifest is not an authorization.
+Every Stage 2+ broker guard requires a durable personal-risk ledger, a durable pending-entry
+ledger, a separately completed bootstrap, canonical deployment-context verification,
+exact account/broker/paper/route pins, native atomic protection/OCO, venue reduce-only or
+close-position semantics, authoritative cancellation and terminal history, complete
+firm-session execution replay, and account-owner fencing. Both shipped adapters advertise
+at least one missing capability and are refused. A test-only adapter exercises the
+positive constructor path without qualifying any real route.
+
+Stage 3/4 startup additionally requires a short-lived signed human authorization that pins
+the account, profile phase, profile hash, official-source snapshot hash, runtime
+configuration, strategy artifact, actual code revision, execution route, and
+ownership/exclusivity attestations. The repository must be clean; official-source
+verification must be complete, current, and unchanged; and profiles with unresolved
+ambiguity notes are refused. The supplied configuration is Stage 0 and the example
+manifest is not an authorization.
 
 ## Research integrity
 
@@ -104,6 +120,12 @@ caller must explicitly unlock HOLDOUT or ALL, and doing so spends the final unbi
 Signals use history ending at the current closed bar, entries fill no earlier than the
 next bar, and same-entry-bar stops are active after an opening fill. When an OHLC bar spans
 both stop and target, the pessimistic stop is selected.
+
+The signed entry price is a bounded IOC limit, not an indefinitely resting market proxy.
+Strategy stop/target geometry and minimum reward/risk are recomputed at that executable
+bound before approval and final verification. In the simulator, IOC has one eligible
+opening print; a non-marketable order or unfilled remainder is terminally cancelled before
+the bar's later range can affect it.
 
 Backtest equity includes entry and exit costs. Partial fills aggregate into one completed
 trade. Session end and end-of-data attempt a confirmed flatten and treat unresolved
@@ -114,8 +136,28 @@ position/order state as an error rather than silently finishing flat.
 The SQLite journal records signals, accepted and rejected decisions, orders, fills,
 trades, equity, and operational events. On restart, the execution layer compares local
 state with broker positions and orders; broker state is authoritative and divergence is
-journalled. Runtime risk/account persistence and production-grade transactional recovery
-remain incomplete and are listed in `docs/LIMITATIONS.md`.
+journalled.
+
+Personal risk and unresolved entry submissions also have separate, strictly versioned
+durable ledgers. Each ledger uses exact bindings, atomic replace and fsync, a sibling
+advisory writer lock, monotonic revision/CAS rules, and strict corruption rejection. The
+personal ledger persists equity/session watermarks, trade quota, loss state, and active
+entry/fill identity. Its initialization marker prevents a deleted file from being silently
+re-created as a fresh account. The entry ledger persists account/route plus local and
+broker order identities and cumulative fill evidence; a stale writer cannot erase stronger
+fill evidence.
+
+Bootstrap is an explicit, one-time operator workflow. A new runtime restores the state but
+remains entry-locked until a fresh exact broker snapshot reconciles it. Persistence faults
+latch new entries and the kill switch, while typed reduce-only flatten/exit paths remain
+available. If a fill cannot be persisted, the guard attempts a snapshot-authorized full
+flatten rather than exposing the fill as safely accounted.
+
+These local ledgers are not an atomic transaction with each other or with a venue. A
+cancellation can race a fill, and a flatten decision can race another account owner; even
+a fresh sequence of account/order/position reads is not a versioned atomic snapshot.
+Consequently Stage 2+ stays blocked until the adapter proves atomic protected entry,
+authoritative full-session replay, and venue-backed account-owner fencing.
 
 ## Configuration ownership
 

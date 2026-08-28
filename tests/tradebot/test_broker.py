@@ -25,7 +25,14 @@ from tradebot.config import (
 )
 from tradebot.core.clock import MARKET_TZ, SimulatedClock
 from tradebot.core.models import Bar, Order, OrderIntent
-from tradebot.core.types import OrderPurpose, OrderStatus, OrderType, RejectReason, Side
+from tradebot.core.types import (
+    OrderPurpose,
+    OrderStatus,
+    OrderType,
+    RejectReason,
+    Side,
+    TimeInForce,
+)
 from tradebot.instruments.registry import get_instrument
 from tradebot.broker.base import (
     BrokerAdapter,
@@ -188,6 +195,76 @@ def test_a_gap_through_a_limit_fills_at_the_better_open(sim):
     events = sim.on_bar(bar(open_=17980.0, price=17982.0, low=17978.0, ts=at(11, 1)))
     assert events[0].fill.price == 17980.0, "a gap below a buy limit fills better, not worse"
     assert events[0].fill.slippage_points == 0.0
+
+
+def test_ioc_limit_expires_at_first_open_and_a_later_wick_cannot_fill_it(sim):
+    order = Order(
+        order_id="ioc-missed",
+        timestamp=at(),
+        instrument="MNQ",
+        side=Side.BUY,
+        quantity=1,
+        order_type=OrderType.LIMIT,
+        limit_price=17_990.0,
+        time_in_force=TimeInForce.IOC,
+    )
+    sim.place_order(order)
+
+    # The open is outside the signed buy limit. Even though this same bar later trades
+    # through the price, IOC is terminal at the first eligible open opportunity.
+    events = sim.on_bar(
+        bar(
+            open_=18_000.0,
+            price=17_985.0,
+            high=18_001.0,
+            low=17_980.0,
+            ts=at(11, 1),
+        )
+    )
+
+    assert [event.kind for event in events] == [EventKind.CANCELLED]
+    assert sim.get_positions() == []
+    assert sim.working_order_count == 0
+    assert sim.on_bar(
+        bar(open_=17_980.0, price=17_982.0, low=17_975.0, ts=at(11, 2))
+    ) == []
+
+
+def test_ioc_partial_fill_cancels_remainder_in_the_same_open_phase(costs, clock):
+    broker = SimulatedBroker(
+        MNQ,
+        costs,
+        config=SimulatedBrokerConfig(
+            latency_ms=0,
+            partial_fill_probability=1.0,
+            seed=1,
+        ),
+        clock=clock,
+    )
+    broker.connect()
+    broker.place_order(
+        Order(
+            order_id="ioc-partial",
+            timestamp=at(),
+            instrument="MNQ",
+            side=Side.BUY,
+            quantity=4,
+            order_type=OrderType.LIMIT,
+            limit_price=18_001.0,
+            time_in_force=TimeInForce.IOC,
+        )
+    )
+
+    events = broker.on_bar(bar(open_=18_000.0, ts=at(11, 1)))
+
+    assert [event.kind for event in events] == [
+        EventKind.PARTIAL_FILL,
+        EventKind.CANCELLED,
+    ]
+    assert events[0].fill.quantity == 2
+    assert broker.get_positions()[0].quantity == 2
+    assert broker.working_order_count == 0
+    assert broker.on_bar(bar(open_=17_999.0, ts=at(11, 2))) == []
 
 
 def test_a_gap_through_a_stop_fills_at_the_open_not_at_the_stop(sim):

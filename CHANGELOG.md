@@ -6,6 +6,30 @@ All notable, safety-relevant, and operator-visible changes are recorded here.
 
 ### Added
 
+- Versioned durable personal-risk state and pending-entry reservations with strict
+  account/route/context bindings, atomic fsync/replace, advisory writer locks, monotonic
+  fill evidence, revisions, and compare-and-swap updates. Personal risk also uses a
+  one-time bootstrap marker so deleting its state cannot create a fresh account history.
+- Canonical deployment-context and exact broker identity pins are now part of durable risk
+  policy. Restarted entries remain locked until fresh broker reconciliation succeeds.
+- Stage 2+ broker capability certification now requires atomic native protection/OCO,
+  reduce-only/close-position semantics, authoritative cancellation and terminal history,
+  authoritative firm-session execution replay, and account-owner fencing. No shipped
+  adapter currently qualifies.
+- All-in entry sizing uses the worst signed entry bound plus an eight-tick protective-stop
+  gap reserve, round-trip commission, and stressed exit slippage before deriving quantity.
+  Market intents become bounded IOC limits; unbounded STOP/STOP_LIMIT entries, fills
+  beyond the signed entry envelope, and realized loss beyond the approved pro-rata
+  envelope fail closed and latch the kill switch.
+- Strategy geometry and minimum reward/risk are repriced at the final signed executable
+  entry before approval and again before submission. The generic Stage-0 runner applies
+  the same finite, tick-aligned, protective target/stop checks independently.
+- Snapshot-authorized emergency flattening for recovered broker exposure, monotonic
+  cumulative-fill reconciliation, and simulator-side reduction caps that cannot reverse a
+  position through flat.
+- Short-lived signed deployment authorization now binds the actual clean code revision,
+  artifacts, runtime configuration, profile/source snapshot, account, phase, and exact
+  execution route through Stage 3/4 startup.
 - Durable repository operating instructions and decision/experiment ledgers for the
   survival-first $50K prop-firm mission.
 - Standing requirement for dated, official-source prop profiles and fail-closed Stage 3/4
@@ -52,6 +76,25 @@ All notable, safety-relevant, and operator-visible changes are recorded here.
 
 ### Changed
 
+- The simulator now gives IOC entries one eligible opening print only. A non-marketable
+  opening cancels without a later intrabar-wick or future-bar fill, while an opening
+  partial fill cancels its remainder. Tradovate orders carry the exact IOC instruction.
+- Numeric configuration rejects booleans, non-finite values, fractional integers, and
+  invalid timeouts/seeds instead of allowing language coercions to weaken policy.
+- The 2026-08-25 official-source audit repeated the four prior mismatches and added the
+  shared Daily Loss Limit page, for five distinct changed pages. New alerts were recorded;
+  no reviewed hash, profile, or execution behavior was automatically changed.
+- The 2026-08-24 official-source audit detected changed content on Growth Evaluation,
+  Lightning Funded Accounts, Select Evaluation, and Select funded/payout policy pages.
+  Alerts and empty unapproved proposals were emitted; the 2026-08-22 profiles and source
+  baselines remain unchanged and are now stale for Stage 2+.
+- Tradovate projections are exact-account and account-scoped, resolve the precise contract
+  maturity/product instrument, preserve foreign identities for rejection, and treat
+  malformed/corrected/cumulative fill evidence conservatively. The adapter still does not
+  advertise Stage 2 recovery safety.
+- Protective and flatten orders are risk-reducing in the simulator: flat, same-side, or
+  oversized concurrent exits cancel or cap at the opposing exposure instead of opening a
+  reverse position.
 - Personal defaults are now authoritative ceilings rather than strategy suggestions.
 - Prop-firm policy is loaded by exact profile and phase; no strategy module contains firm
   constants.
@@ -60,6 +103,12 @@ All notable, safety-relevant, and operator-visible changes are recorded here.
 
 ### Fixed
 
+- `STOP TRADING` now requests entry cancellation and consumes immediately available
+  broker events before matching another bar; raced terminal events apply fill economics
+  exactly once before cancellation/rejection handling, so a late fill cannot disappear.
+- Durable pending-entry reservations bind immutable side, order type, limit, and stop
+  facts and validate cumulative fill identity, time, price, quantity, and cost evidence
+  before advancing personal risk state.
 - The test suite could not be collected: `deployment/stages.py` referenced
   `dataclass_field` without importing it, and `broker/guarded.py` carried an orphaned
   block from an interrupted edit that raised `IndentationError`. The orphan was the
@@ -93,9 +142,11 @@ All notable, safety-relevant, and operator-visible changes are recorded here.
 
 ### Safety status
 
-- Stage 3 and Stage 4 remain unavailable. No strategy has validated positive expectancy,
-  unresolved official-rule conflicts remain, and no permitted Tradeify Evaluation/Sim
-  Funded execution route has been approved.
+- Stage 2, Stage 3, and Stage 4 are unavailable with every shipped adapter. Atomic
+  protected-entry semantics, authoritative session replay, and account-owner fencing are
+  not implemented; the official profiles also became stale when four Tradeify pages
+  changed on 2026-08-24. No strategy has validated positive expectancy, no permitted
+  Tradeify Evaluation/Sim Funded route is approved, and no live execution was enabled.
 
 ### Existing implementation recovered
 

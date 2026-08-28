@@ -86,6 +86,7 @@ def run_backtest(
     features: FeatureFrame | None = None,
     dataset_hash: str = "",
     progress_every: int = 0,
+    minimum_expected_rr: float = 2.0,
 ) -> BacktestResult:
     instrument = instrument or get_instrument(config.instrument)
     selected_split = split if isinstance(split, Split) else Split(str(split).strip().lower())
@@ -113,6 +114,11 @@ def run_backtest(
         config.risk, instrument, config.session, clock=clock, kill_switch=kill_switch,
         starting_equity=config.risk.starting_equity_usd,
         enforce_drawdown_floor=enforce_drawdown_floor,
+        cost_config=config.costs,
+        # The prop-history runner uses the full ThreeLayerRiskEngine. This generic
+        # research runner still enforces the same signed execution geometry so it cannot
+        # create flattering trades whose target is invalid after the adverse entry bound.
+        minimum_expected_rr=minimum_expected_rr,
     )
     broker = SimulatedBroker(
         instrument, costs, config=config.broker.simulated, clock=clock,

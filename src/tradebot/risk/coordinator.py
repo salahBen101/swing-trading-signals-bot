@@ -18,8 +18,11 @@ personal engine's token verification so an entry-only prop rule can never trap e
 from __future__ import annotations
 
 import math
+import hashlib
+import json
+import re
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from threading import RLock
@@ -27,7 +30,12 @@ from typing import Any, Callable
 
 from ..core.models import Order, OrderIntent, Position, Rejection, Trade
 from ..core.types import OrderPurpose, RejectReason
-from ..deployment.stages import DeploymentStage, StageAuthorization
+from ..deployment.stages import (
+    DeploymentStage,
+    StageAuthorization,
+    normalize_execution_route,
+    stage_authorization_failure_codes,
+)
 from ..prop_firms.models import AccountRuleSet, PropFirmProfile
 from .broker_state import AuthoritativeBrokerSnapshot, BrokerRiskAccount
 from .limits import Approval, RiskDecision, RiskEngine
@@ -49,6 +57,81 @@ class ContractKind(str, Enum):
 
     MINI = "mini"
     MICRO = "micro"
+
+
+_SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+
+
+def canonical_risk_state_context_id(
+    *,
+    strategy_gate: StrategyGate,
+    profile: PropFirmProfile,
+    rules: AccountRuleSet,
+    deployment_stage: DeploymentStage,
+    contract_kind: ContractKind,
+    runtime_config_sha256: str,
+) -> str:
+    """Derive the durable account context from structured, material runtime policy."""
+
+    if not isinstance(strategy_gate, StrategyGate):
+        raise TypeError("strategy_gate must be a StrategyGate")
+    if not isinstance(profile, PropFirmProfile) or not isinstance(rules, AccountRuleSet):
+        raise TypeError("profile and rules must be validated prop-firm models")
+    if rules not in profile.phases:
+        raise ValueError("rules must belong to the canonical prop profile")
+    if not isinstance(deployment_stage, DeploymentStage):
+        raise TypeError("deployment_stage must be a DeploymentStage")
+    if not isinstance(contract_kind, ContractKind):
+        raise TypeError("contract_kind must be a ContractKind")
+    if not isinstance(runtime_config_sha256, str) or not _SHA256_HEX.fullmatch(
+        runtime_config_sha256
+    ):
+        raise ValueError("runtime_config_sha256 must be lowercase SHA-256 hex")
+
+    instrument = strategy_gate.instrument
+    payload = _json_safe(
+        {
+            "schema_version": 1,
+            "deployment_stage": int(deployment_stage),
+            "contract_kind": contract_kind,
+            "runtime_config_sha256": runtime_config_sha256,
+            "profile_identity": {
+                "schema_version": profile.schema_version,
+                "profile_id": profile.profile_id,
+                "firm": profile.firm,
+                "program": profile.program,
+                "account_size_usd": profile.account_size_usd,
+                "purchase_cohort": profile.purchase_cohort,
+            },
+            # Verification dates are deliberately excluded: refreshing identical official
+            # sources must not erase account history. Every material trading/compliance
+            # rule remains part of the binding.
+            "trading_window": asdict(profile.trading_window),
+            "compliance": asdict(profile.compliance),
+            "selected_rules": asdict(rules),
+            "instrument": {
+                "symbol": instrument.symbol,
+                "multiplier": instrument.multiplier,
+                "tick_size": instrument.tick_size,
+                "currency": instrument.currency,
+            },
+            "strategy_gate": {
+                "minimum_expected_rr": strategy_gate.minimum_expected_rr,
+                "max_signal_age_seconds": strategy_gate.max_signal_age.total_seconds(),
+                "max_data_age_seconds": strategy_gate.max_data_age.total_seconds(),
+            },
+        }
+    )
+    digest = hashlib.sha256(
+        json.dumps(
+            payload,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    return f"risk-context-v1:{digest}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,6 +390,7 @@ class ThreeLayerRiskEngine:
         deployment_stage: DeploymentStage,
         contract_kind: ContractKind,
         context_provider: RuntimeContextProvider,
+        runtime_config_sha256: str | None = None,
     ) -> None:
         if not isinstance(strategy_gate, StrategyGate):
             raise TypeError("strategy_gate must be a StrategyGate")
@@ -329,6 +413,20 @@ class ThreeLayerRiskEngine:
             raise ValueError("rules must belong to the fixed prop profile")
         if strategy_gate.instrument.symbol != personal_risk.instrument.symbol:
             raise ValueError("strategy and personal gates must use the same instrument")
+        if personal_risk.durable_state_enabled and deployment_stage >= DeploymentStage.PAPER:
+            if runtime_config_sha256 is None:
+                raise ValueError(
+                    "durable Stage 2+ risk requires a pinned runtime configuration hash"
+                )
+            expected_context = canonical_risk_state_context_id(
+                strategy_gate=strategy_gate,
+                profile=profile,
+                rules=rules,
+                deployment_stage=deployment_stage,
+                contract_kind=contract_kind,
+                runtime_config_sha256=runtime_config_sha256,
+            )
+            personal_risk.verify_canonical_deployment_context(expected_context)
 
         self._strategy_gate = strategy_gate
         self._personal = personal_risk
@@ -339,6 +437,9 @@ class ThreeLayerRiskEngine:
         self._context_provider = context_provider
         self._pending_intents: dict[str, OrderIntent] = {}
         self._pending_account_ids: dict[str, str | None] = {}
+        self._pending_authorization_fingerprints: dict[
+            str, tuple[str | None, ...] | None
+        ] = {}
         self._pending_lock = RLock()
         self._last_verify_decision: ThreeLayerDecision | None = None
 
@@ -409,6 +510,31 @@ class ThreeLayerRiskEngine:
                 rejection=rejection,
             )
 
+        strategy_decision = self._strategy_gate.reprice_for_execution(
+            strategy_decision,
+            intent,
+            entry_price=approval.order.limit_price,
+        )
+        strategy_trace = StrategyLayerTrace(strategy_decision)
+        if not strategy_decision.approved:
+            rejection = self._strategy_rejection(
+                now,
+                intent,
+                strategy_decision,
+                order=approval.order,
+            )
+            return ThreeLayerDecision(
+                "ENTRY_EVALUATE",
+                False,
+                context_trace,
+                strategy_trace,
+                personal_trace,
+                PropLayerTrace.skipped(
+                    "Layer 1 rejected the signed execution geometry"
+                ),
+                rejection=rejection,
+            )
+
         prop_decision = self._evaluate_prop(
             now=now,
             context=context,
@@ -439,6 +565,14 @@ class ThreeLayerRiskEngine:
             authorization = context.stage_authorization
             self._pending_account_ids[approval.order.order_id] = (
                 authorization.account_id
+                if (
+                    self._deployment_stage.requires_human_approval
+                    and isinstance(authorization, StageAuthorization)
+                )
+                else None
+            )
+            self._pending_authorization_fingerprints[approval.order.order_id] = (
+                _stage_authorization_fingerprint(authorization)
                 if (
                     self._deployment_stage.requires_human_approval
                     and isinstance(authorization, StageAuthorization)
@@ -502,6 +636,9 @@ class ThreeLayerRiskEngine:
             stored_intent = self._pending_intents.get(order.order_id)
             stored_intent = deepcopy(stored_intent) if stored_intent is not None else None
             stored_account_id = self._pending_account_ids.get(order.order_id)
+            stored_authorization_fingerprint = (
+                self._pending_authorization_fingerprints.get(order.order_id)
+            )
         if stored_intent is None:
             rejection = self._rejection(
                 now,
@@ -541,6 +678,11 @@ class ThreeLayerRiskEngine:
             market_data_timestamp=context.market_data_timestamp,
             strategy_permitted=context.strategy_permitted,
             session_permitted=context.session_permitted,
+        )
+        strategy_decision = self._strategy_gate.reprice_for_execution(
+            strategy_decision,
+            stored_intent,
+            entry_price=order.limit_price,
         )
         strategy_trace = StrategyLayerTrace(strategy_decision)
         if not strategy_decision.approved:
@@ -583,6 +725,7 @@ class ThreeLayerRiskEngine:
             context=context,
             broker_snapshot=broker_snapshot,
             stored_account_id=stored_account_id,
+            stored_authorization_fingerprint=stored_authorization_fingerprint,
             order=order,
         )
         if identity_rejection is not None:
@@ -616,6 +759,7 @@ class ThreeLayerRiskEngine:
         with self._pending_lock:
             self._pending_intents.pop(order.order_id, None)
             self._pending_account_ids.pop(order.order_id, None)
+            self._pending_authorization_fingerprints.pop(order.order_id, None)
         return ThreeLayerDecision(
             "ENTRY_VERIFY",
             True,
@@ -664,6 +808,14 @@ class ThreeLayerRiskEngine:
     ) -> RiskDecision:
         return self._personal.evaluate_exit(position, reason=reason, now=now)
 
+    def evaluate_snapshot_flatten(
+        self,
+        snapshot: AuthoritativeBrokerSnapshot,
+        *,
+        now: datetime | None = None,
+    ) -> RiskDecision:
+        return self._personal.evaluate_snapshot_flatten(snapshot, now=now)
+
     def evaluate_protective(
         self, position: Position, order: Order, *, now: datetime | None = None
     ) -> RiskDecision:
@@ -686,13 +838,53 @@ class ThreeLayerRiskEngine:
             with self._pending_lock:
                 self._pending_intents.clear()
                 self._pending_account_ids.clear()
+                self._pending_authorization_fingerprints.clear()
         return rolled
 
     def on_position_opened(self, position: Position) -> None:
         self._personal.on_position_opened(position)
 
+    def on_entry_fill_observed(
+        self,
+        order_id: str,
+        *,
+        now: datetime,
+    ) -> bool:
+        return self._personal.on_entry_fill_observed(order_id, now=now)
+
+    def on_entry_terminal_unfilled(self, order_id: str, *, now: datetime) -> bool:
+        return self._personal.on_entry_terminal_unfilled(order_id, now=now)
+
     def on_trade_closed(self, trade: Trade) -> None:
         self._personal.on_trade_closed(trade)
+
+    @property
+    def risk_state_store_error(self) -> str | None:
+        return self._personal.risk_state_store_error
+
+    @property
+    def risk_state_recovery_required(self) -> bool:
+        return self._personal.risk_state_recovery_required
+
+    @property
+    def durable_state_enabled(self) -> bool:
+        return self._personal.durable_state_enabled
+
+    @property
+    def durable_state_certified(self) -> bool:
+        return self._personal.durable_state_certified
+
+    @property
+    def risk_state_bootstrapped_this_process(self) -> bool:
+        return self._personal.risk_state_bootstrapped_this_process
+
+    @property
+    def deployment_context_verified(self) -> bool:
+        return self._personal.deployment_context_verified
+
+    @property
+    def broker_identity_is_pinned(self) -> bool:
+        return self._personal.broker_identity_is_pinned
 
     def forced_exit_reason(self, position: Position, mark: float, now: datetime):
         personal_reason = self._personal.forced_exit_reason(position, mark, now)
@@ -846,20 +1038,42 @@ class ThreeLayerRiskEngine:
             reasons.append("stage_authorization_invalid")
             details.append("stage authorization must be a StageAuthorization object")
         else:
-            if authorization.stage is not self._deployment_stage:
-                reasons.append("stage_authorization_mismatch")
-                details.append("authorization stage does not match the fixed deployment stage")
-            if authorization.allowed is not True:
-                reasons.append("stage_authorization_denied")
-                details.append("runtime stage authorization is denied")
-            if self._deployment_stage.requires_human_approval and (
-                not isinstance(authorization.account_id, str)
-                or not authorization.account_id.strip()
-            ):
-                reasons.append("stage_authorized_account_missing")
-                details.append(
-                    "Stage 3/4 authorization must bind a non-empty manifest account id"
+            if self._deployment_stage.requires_human_approval:
+                authorization_failures = stage_authorization_failure_codes(
+                    authorization,
+                    stage=self._deployment_stage,
+                    as_of=now,
                 )
+                reasons.extend(authorization_failures)
+                details.extend(
+                    _stage_authorization_detail(code) for code in authorization_failures
+                )
+                if "stage_authorization_malformed" not in authorization_failures:
+                    if (
+                        authorization.profile_id != self._profile.profile_id
+                        or authorization.prop_phase != self._rules.name
+                    ):
+                        reasons.append("stage_authorization_rule_binding_mismatch")
+                        details.append(
+                            "stage authorization does not match the fixed prop profile and phase"
+                        )
+                    if (
+                        authorization.rule_verification_checked_at
+                        != context.rule_verification_as_of
+                    ):
+                        reasons.append("stage_authorization_verification_binding_mismatch")
+                        details.append(
+                            "runtime rule verification differs from the authorized verification"
+                        )
+            else:
+                if authorization.stage is not self._deployment_stage:
+                    reasons.append("stage_authorization_mismatch")
+                    details.append(
+                        "authorization stage does not match the fixed deployment stage"
+                    )
+                if authorization.allowed is not True:
+                    reasons.append("stage_authorization_denied")
+                    details.append("runtime stage authorization is denied")
 
         facts = (
             ("profile_id", state.profile_id if isinstance(state, PropAccountState) else None),
@@ -911,6 +1125,7 @@ class ThreeLayerRiskEngine:
         context: RuntimeRiskContext,
         broker_snapshot: AuthoritativeBrokerSnapshot | None,
         stored_account_id: str | None,
+        stored_authorization_fingerprint: tuple[str | None, ...] | None,
         order: Order,
     ) -> Rejection | None:
         """Bind a Stage 3/4 token to manifest identity before personal verification."""
@@ -941,6 +1156,16 @@ class ThreeLayerRiskEngine:
                 "BROKER_IDENTITY",
                 order=order,
             )
+        if stored_authorization_fingerprint != _stage_authorization_fingerprint(
+            authorization
+        ):
+            return self._rejection(
+                now,
+                RejectReason.LIVE_TRADING_DISABLED,
+                "authorized deployment capability changed after entry approval",
+                "BROKER_IDENTITY",
+                order=order,
+            )
         if not isinstance(broker_snapshot, AuthoritativeBrokerSnapshot):
             return self._rejection(
                 now,
@@ -967,6 +1192,16 @@ class ThreeLayerRiskEngine:
                 now,
                 RejectReason.LIVE_TRADING_DISABLED,
                 "authoritative broker account does not match the approved manifest",
+                "BROKER_IDENTITY",
+                order=order,
+            )
+        if normalize_execution_route(
+            broker_snapshot.execution_route
+        ) != normalize_execution_route(authorization.execution_route or ""):
+            return self._rejection(
+                now,
+                RejectReason.LIVE_TRADING_DISABLED,
+                "authoritative broker route does not match the approved manifest",
                 "BROKER_IDENTITY",
                 order=order,
             )
@@ -1020,7 +1255,7 @@ class ThreeLayerRiskEngine:
             RejectReason.BROKER_ERROR
             if "provider_exception" in trace.reason_codes
             else RejectReason.LIVE_TRADING_DISABLED
-            if any(code.startswith("stage_authorization") for code in trace.reason_codes)
+            if any(code.startswith("stage_author") for code in trace.reason_codes)
             else RejectReason.INVALID_ORDER
         )
         return self._rejection(
@@ -1155,6 +1390,46 @@ def _aware(value: Any) -> bool:
         and value.tzinfo is not None
         and value.utcoffset() is not None
     )
+
+
+def _stage_authorization_fingerprint(
+    authorization: StageAuthorization,
+) -> tuple[str | None, ...]:
+    return (
+        authorization.authorization_id,
+        authorization.manifest_sha256,
+        authorization.profile_id,
+        authorization.prop_phase,
+        authorization.execution_route,
+        authorization.rule_verification_sha256,
+        authorization.runtime_config_sha256,
+        authorization.strategy_artifact_sha256,
+        authorization.code_revision,
+    )
+
+
+def _stage_authorization_detail(code: str) -> str:
+    return {
+        "stage_authorization_mismatch": (
+            "authorization stage does not match the fixed deployment stage"
+        ),
+        "stage_authorization_denied": "runtime stage authorization is denied",
+        "stage_authorized_account_missing": (
+            "Stage 3/4 authorization must bind a non-empty manifest account id"
+        ),
+        "stage_authorized_route_missing": (
+            "Stage 3/4 authorization must bind a non-empty execution route"
+        ),
+        "stage_authorization_check_time_invalid": (
+            "stage authorization must be checked with a timezone-aware time"
+        ),
+        "stage_authorization_malformed": "stage authorization claims are incomplete or invalid",
+        "stage_authorization_unauthenticated": (
+            "stage authorization was not minted by the current approval authority or was modified"
+        ),
+        "stage_authorization_not_yet_valid": "stage authorization is not yet valid",
+        "stage_authorization_expired": "stage authorization has expired",
+    }.get(code, "stage authorization is invalid")
 
 
 def _json_safe(value: Any) -> Any:

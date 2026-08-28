@@ -7,8 +7,8 @@ Implements `BrokerAdapter` against the documented REST endpoints:
 | authenticate | `POST /auth/accesstokenrequest` (see `auth.py`) |
 | place an order | `POST /order/placeorder` |
 | cancel an order | `POST /order/cancelorder` |
-| working orders | `GET /order/list` |
-| positions | `GET /position/list` |
+| account orders | `GET /order/deps?masterid=...` |
+| account positions | `GET /position/deps?masterid=...` |
 | accounts | `GET /account/list` |
 
 **`isAutomated` is always true.** Exchange policy requires any order not physically
@@ -25,14 +25,17 @@ real-money venue in v1.
 from __future__ import annotations
 
 from datetime import datetime
+from math import isfinite
+from urllib.parse import quote
 
 from ...core.clock import MARKET_TZ, Clock, SystemClock
 from ...core.models import Fill, Order, new_id
-from ...core.types import OrderStatus, OrderType, Side
+from ...core.types import OrderStatus, OrderType, Side, TimeInForce
 from ...instruments.registry import InstrumentSpec
 from ..base import (
     BrokerAccount,
     BrokerCapabilities,
+    BrokerConnectionError,
     BrokerEvent,
     BrokerOrderState,
     BrokerPosition,
@@ -51,6 +54,11 @@ _ORDER_TYPE = {
     OrderType.LIMIT: "Limit",
     OrderType.STOP: "Stop",
     OrderType.STOP_LIMIT: "StopLimit",
+}
+_TIME_IN_FORCE = {
+    TimeInForce.DAY: "Day",
+    TimeInForce.GTC: "GTC",
+    TimeInForce.IOC: "IOC",
 }
 _STATUS = {
     "Working": OrderStatus.ACCEPTED,
@@ -79,6 +87,9 @@ class TradovateBroker:
         server_side_oco=False,
         reduce_only_or_close_position=False,
         authoritative_cancel_status=False,
+        exact_terminal_order_history=False,
+        authoritative_session_execution_history=False,
+        account_owner_fencing=False,
     )
 
     def __init__(
@@ -102,24 +113,35 @@ class TradovateBroker:
                                  max_retries=max_retries)
         self.credentials = credentials or load_credentials(self.environment)
         self.auth = Authenticator(self.client, self.credentials, clock=self.clock)
-        # Tradovate wants a concrete contract, e.g. MNQZ6. Falls back to the root, which
-        # some deployments accept and which keeps the simulator and this adapter aligned.
+        # Tradovate wants a contract name, normally a concrete expiry such as MNQZ6.
+        # Connection resolves it through contract -> maturity -> product and refuses it
+        # unless that official product identity matches the configured InstrumentSpec.
         self.symbol = symbol or instrument.symbol
         self._connected = False
         self._events: list[BrokerEvent] = []
         self._account_id: int | None = None
+        self._contract_id: int | None = None
+        self._contract_names: dict[int, str] = {}
         self._seen_fills: set[str] = set()
         self._order_ids: dict[str, str] = {}  # broker orderId -> our order_id
+        self._order_quantities: dict[str, int] = {}
+        self._filled_quantities: dict[str, int] = {}
 
     @property
     def is_paper(self) -> bool:
         return self.environment is Environment.DEMO
+
+    @property
+    def execution_route(self) -> str:
+        return f"tradovate-{self.environment.value}-rest-api"
 
     # ------------------------------------------------------------------ connection
 
     def connect(self) -> None:
         self.auth.token()  # authenticates, raising BrokerAuthError without credentials
         self._account_id = self._resolve_account_id()
+        self._contract_id = self._resolve_contract_id()
+        self._contract_names[self._contract_id] = self.instrument.symbol
         self._connected = True
         self._emit(EventKind.RECONNECTED, detail=f"tradovate {self.environment.value}")
 
@@ -137,17 +159,101 @@ class TradovateBroker:
         return self.auth.token()
 
     def _resolve_account_id(self) -> int:
-        if self.credentials.account_id:
-            return int(self.credentials.account_id)
         accounts = _items(self.client.get("account/list", token=self.auth.token()))
         if not accounts:
             raise OrderRejected("no Tradovate accounts are visible for these credentials")
-        return int(accounts[0]["id"])
+
+        try:
+            visible_ids = [_positive_int(row.get("id"), "account.id") for row in accounts]
+        except BrokerConnectionError as exc:
+            raise OrderRejected(f"Tradovate returned an invalid account list: {exc}") from exc
+
+        if self.credentials.account_id:
+            try:
+                configured_id = _positive_int(
+                    self.credentials.account_id, "configured account_id"
+                )
+            except BrokerConnectionError as exc:
+                raise OrderRejected(str(exc)) from exc
+            if visible_ids.count(configured_id) != 1:
+                raise OrderRejected(
+                    f"configured Tradovate account {configured_id} is not uniquely visible"
+                )
+            return configured_id
+
+        if len(visible_ids) != 1:
+            raise OrderRejected(
+                "multiple Tradovate accounts are visible; configure an explicit account_id"
+            )
+        return visible_ids[0]
+
+    def _resolve_contract_id(self) -> int:
+        encoded_symbol = quote(self.symbol, safe="")
+        rows = _items(
+            self.client.get(
+                f"contract/find?name={encoded_symbol}", token=self.auth.token()
+            )
+        )
+        if len(rows) != 1:
+            raise OrderRejected(
+                f"configured Tradovate contract {self.symbol!r} was not uniquely resolved"
+            )
+        row = rows[0]
+        if row.get("name") != self.symbol:
+            raise OrderRejected(
+                f"Tradovate resolved {self.symbol!r} as {row.get('name')!r}; refusing"
+            )
+        try:
+            contract_id = _positive_int(row.get("id"), "contract.id")
+            maturity_id = _positive_int(
+                row.get("contractMaturityId"), "contract.contractMaturityId"
+            )
+            maturity = self._single_identity_row(
+                f"contractMaturity/item?id={maturity_id}",
+                expected_id=maturity_id,
+                entity="contract maturity",
+            )
+            product_id = _positive_int(
+                maturity.get("productId"), "contractMaturity.productId"
+            )
+            product = self._single_identity_row(
+                f"product/item?id={product_id}",
+                expected_id=product_id,
+                entity="product",
+            )
+        except BrokerConnectionError as exc:
+            raise OrderRejected(f"Tradovate returned an invalid contract: {exc}") from exc
+        if product.get("name") != self.instrument.symbol:
+            raise OrderRejected(
+                f"Tradovate contract {self.symbol!r} belongs to product "
+                f"{product.get('name')!r}, not {self.instrument.symbol!r}"
+            )
+        return contract_id
+
+    def _single_identity_row(
+        self, path: str, *, expected_id: int, entity: str
+    ) -> dict:
+        rows = _items(self.client.get(path, token=self.auth.token()))
+        if len(rows) != 1:
+            raise BrokerConnectionError(f"Tradovate {entity} was not uniquely resolved")
+        row = rows[0]
+        if _positive_int(row.get("id"), f"{entity}.id") != expected_id:
+            raise BrokerConnectionError(
+                f"Tradovate returned the wrong identity for {entity} {expected_id}"
+            )
+        return row
 
     # ------------------------------------------------------------------ orders
 
     def place_order(self, order: Order) -> OrderAck:
         token = self._require()
+        if order.instrument != self.instrument.symbol:
+            detail = (
+                f"order instrument {order.instrument!r} does not match adapter instrument "
+                f"{self.instrument.symbol!r}"
+            )
+            self._emit(EventKind.REJECTED, order_id=order.order_id, detail=detail)
+            raise OrderRejected(detail)
         body = {
             "accountSpec": self.credentials.account_spec or self.credentials.name,
             "accountId": self._account_id,
@@ -155,6 +261,7 @@ class TradovateBroker:
             "symbol": self.symbol,
             "orderQty": int(order.quantity),
             "orderType": _ORDER_TYPE[order.order_type],
+            "timeInForce": _TIME_IN_FORCE[order.time_in_force],
             # Required by exchange policy for anything not triggered by a human.
             "isAutomated": True,
         }
@@ -175,6 +282,8 @@ class TradovateBroker:
             raise OrderRejected(f"no orderId in the placeorder response: {response}")
 
         self._order_ids[broker_order_id] = order.order_id
+        self._order_quantities[broker_order_id] = order.quantity
+        self._filled_quantities[broker_order_id] = 0
         self._emit(EventKind.ACCEPTED, order_id=order.order_id,
                    broker_order_id=broker_order_id,
                    detail=f"{body['orderType']} {body['action']} x{body['orderQty']}")
@@ -197,8 +306,15 @@ class TradovateBroker:
 
     def get_orders(self) -> list[BrokerOrderState]:
         token = self._require()
+        account_id = self._selected_account_id()
         out = []
-        for row in _items(self.client.get("order/list", token=token)):
+        rows = _items(
+            self.client.get(f"order/deps?masterid={account_id}", token=token)
+        )
+        for row in rows:
+            row_account_id = _positive_int(row.get("accountId"), "order.accountId")
+            if row_account_id != account_id:
+                continue
             broker_order_id = str(row.get("id", ""))
             out.append(
                 BrokerOrderState(
@@ -214,14 +330,22 @@ class TradovateBroker:
 
     def get_positions(self) -> list[BrokerPosition]:
         token = self._require()
+        account_id = self._selected_account_id()
         out = []
-        for row in _items(self.client.get("position/list", token=token)):
-            quantity = int(row.get("netPos") or 0)
+        rows = _items(
+            self.client.get(f"position/deps?masterid={account_id}", token=token)
+        )
+        for row in rows:
+            row_account_id = _positive_int(row.get("accountId"), "position.accountId")
+            if row_account_id != account_id:
+                continue
+            quantity = _signed_int(row.get("netPos"), "position.netPos")
             if quantity == 0:
                 continue
+            contract_id = _positive_int(row.get("contractId"), "position.contractId")
             out.append(
                 BrokerPosition(
-                    instrument=self.instrument.symbol,
+                    instrument=self._instrument_name(contract_id, token=token),
                     quantity=quantity,
                     average_price=float(row.get("netPrice") or 0.0),
                 )
@@ -230,14 +354,21 @@ class TradovateBroker:
 
     def get_account(self) -> BrokerAccount:
         token = self._require()
+        account_id = self._selected_account_id()
         accounts = _items(self.client.get("account/list", token=token))
-        row = next(
-            (a for a in accounts if int(a.get("id", -1)) == self._account_id),
-            accounts[0] if accounts else {},
-        )
+        matches = [
+            row
+            for row in accounts
+            if _positive_int(row.get("id"), "account.id") == account_id
+        ]
+        if len(matches) != 1:
+            raise BrokerConnectionError(
+                f"selected Tradovate account {account_id} is not uniquely visible"
+            )
+        row = matches[0]
         cash = float(row.get("cashBalance") or row.get("totalCashValue") or 0.0)
         return BrokerAccount(
-            account_id=str(row.get("id", self._account_id or "")),
+            account_id=str(account_id),
             equity=float(row.get("totalCashValue") or cash),
             cash=cash,
             realized_pnl=float(row.get("realizedPnL") or 0.0),
@@ -269,29 +400,69 @@ class TradovateBroker:
             fill_id = str(row.get("id", ""))
             if not fill_id or fill_id in self._seen_fills:
                 continue
-            self._seen_fills.add(fill_id)
 
             broker_order_id = str(row.get("orderId", ""))
-            order_id = self._order_ids.get(broker_order_id, "")
-            quantity = int(row.get("qty") or 0)
-            if quantity <= 0:
+            order_id = self._order_ids.get(broker_order_id)
+            if order_id is None:
+                # fill/list is not account scoped.  Only fills joined to an order this
+                # adapter submitted can safely be projected into this broker instance.
+                self._seen_fills.add(fill_id)
                 continue
-            side = Side.BUY if str(row.get("action", "Buy")) == "Buy" else Side.SELL
-            fill = Fill(
-                fill_id=new_id("fil"),
-                order_id=order_id,
-                timestamp=_parse_time(row.get("timestamp"), self._now()),
-                instrument=self.instrument.symbol,
-                side=side,
-                quantity=quantity,
-                price=float(row.get("price") or 0.0),
-                commission_usd=float(row.get("commission") or 0.0),
-                broker_fill_id=fill_id,
-                is_partial=bool(row.get("active", False)),
-            )
-            self._emit(EventKind.FILL, order_id=order_id,
+
+            try:
+                contract_id = _positive_int(row.get("contractId"), "fill.contractId")
+                if contract_id != self._selected_contract_id():
+                    raise BrokerConnectionError(
+                        f"fill {fill_id} contract {contract_id} does not match configured "
+                        f"contract {self._selected_contract_id()}"
+                    )
+                quantity = _positive_int(row.get("qty"), "fill.qty")
+                expected_quantity = self._order_quantities[broker_order_id]
+                cumulative_quantity = (
+                    self._filled_quantities.get(broker_order_id, 0) + quantity
+                )
+                if cumulative_quantity > expected_quantity:
+                    raise BrokerConnectionError(
+                        f"fill {fill_id} would overfill order {broker_order_id}: "
+                        f"{cumulative_quantity} > {expected_quantity}"
+                    )
+                side = _fill_side(row.get("action"))
+                price = _positive_finite_float(row.get("price"), "fill.price")
+                commission = _finite_float(
+                    row.get("commission") or 0.0, "fill.commission"
+                )
+                is_partial = cumulative_quantity < expected_quantity
+                fill = Fill(
+                    fill_id=new_id("fil"),
+                    order_id=order_id,
+                    timestamp=_parse_time(row.get("timestamp"), self._now()),
+                    instrument=self.instrument.symbol,
+                    side=side,
+                    quantity=quantity,
+                    price=price,
+                    commission_usd=commission,
+                    broker_fill_id=fill_id,
+                    is_partial=is_partial,
+                )
+            except (BrokerConnectionError, KeyError, TypeError, ValueError) as exc:
+                self._seen_fills.add(fill_id)
+                self._emit(
+                    EventKind.DISCONNECTED,
+                    order_id=order_id,
+                    broker_order_id=broker_order_id,
+                    detail=f"fill projection failed: {exc}",
+                )
+                continue
+
+            self._seen_fills.add(fill_id)
+            self._filled_quantities[broker_order_id] = cumulative_quantity
+            self._emit(EventKind.PARTIAL_FILL if is_partial else EventKind.FILL,
+                       order_id=order_id,
                        broker_order_id=broker_order_id, fill=fill,
-                       detail=f"{quantity} @ {fill.price}")
+                       detail=(
+                           f"{quantity} @ {fill.price}; cumulative "
+                           f"{cumulative_quantity}/{expected_quantity}"
+                       ))
 
     # ------------------------------------------------------------------ helpers
 
@@ -302,6 +473,38 @@ class TradovateBroker:
 
     def _now(self) -> datetime:
         return self.clock.now().astimezone(MARKET_TZ)
+
+    def _selected_account_id(self) -> int:
+        if self._account_id is None:
+            raise NotConnected("Tradovate account identity is not resolved")
+        return self._account_id
+
+    def _selected_contract_id(self) -> int:
+        if self._contract_id is None:
+            raise NotConnected("Tradovate contract identity is not resolved")
+        return self._contract_id
+
+    def _instrument_name(self, contract_id: int, *, token: str) -> str:
+        cached = self._contract_names.get(contract_id)
+        if cached is not None:
+            return cached
+
+        rows = _items(
+            self.client.get(f"contract/item?id={contract_id}", token=token)
+        )
+        if len(rows) != 1:
+            raise BrokerConnectionError(
+                f"Tradovate contract {contract_id} was not uniquely resolved"
+            )
+        row = rows[0]
+        resolved_id = _positive_int(row.get("id"), "contract.id")
+        name = row.get("name")
+        if resolved_id != contract_id or not isinstance(name, str) or not name.strip():
+            raise BrokerConnectionError(
+                f"Tradovate returned an invalid identity for contract {contract_id}"
+            )
+        self._contract_names[contract_id] = name
+        return name
 
 
 def _items(body: dict) -> list[dict]:
@@ -319,6 +522,56 @@ def _as_int(value: str) -> int | str:
         return int(value)
     except (TypeError, ValueError):
         return value
+
+
+def _positive_int(value, field: str) -> int:
+    parsed = _strict_int(value, field)
+    if parsed <= 0:
+        raise BrokerConnectionError(f"{field} must be a positive integer")
+    return parsed
+
+
+def _signed_int(value, field: str) -> int:
+    return _strict_int(value, field)
+
+
+def _strict_int(value, field: str) -> int:
+    if isinstance(value, bool):
+        raise BrokerConnectionError(f"{field} must be an integer")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw and (raw.isdecimal() or (raw.startswith("-") and raw[1:].isdecimal())):
+            return int(raw)
+    raise BrokerConnectionError(f"{field} must be an integer")
+
+
+def _fill_side(value) -> Side:
+    if value == "Buy":
+        return Side.BUY
+    if value == "Sell":
+        return Side.SELL
+    raise BrokerConnectionError(f"fill.action must be 'Buy' or 'Sell', got {value!r}")
+
+
+def _positive_finite_float(value, field: str) -> float:
+    parsed = _finite_float(value, field)
+    if parsed <= 0:
+        raise BrokerConnectionError(f"{field} must be positive")
+    return parsed
+
+
+def _finite_float(value, field: str) -> float:
+    if isinstance(value, bool):
+        raise BrokerConnectionError(f"{field} must be numeric")
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise BrokerConnectionError(f"{field} must be numeric") from exc
+    if not isfinite(parsed):
+        raise BrokerConnectionError(f"{field} must be finite")
+    return parsed
 
 
 def _parse_time(raw, fallback: datetime) -> datetime:

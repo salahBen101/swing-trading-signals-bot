@@ -6,7 +6,8 @@ the behaviour regresses.
 Baseline at start: 27 pre-existing scanner tests passing. That number must never go down.
 
 Mission-v2 baseline recovered 2026-08-22: 535 tests passed before new prop-profile work.
-Stage 3 and Stage 4 remain blocked.
+Stage 2+ remains blocked with every shipped adapter; Stage 3/4 additionally require human
+approval and current unchanged official rules.
 
 ---
 
@@ -111,7 +112,7 @@ Stage 3 and Stage 4 remain blocked.
 | 4 | Statistics are generated automatically | [x] |
 | 5 | Risk rules cannot be bypassed by the strategy | [x] |
 | 6 | The system can connect to a demo broker | [x] adapter/test seam; not an approved Tradeify route |
-| 7 | It can paper trade automatically | [x] Stage-1 `market-replay` through the simulated broker |
+| 7 | It can paper trade automatically | [ ] Stage-1 replay works; Stage 2 is deliberately blocked until the adapter proves recovery safety |
 | 8 | Every action is logged | [x] signals, reason-coded rejections, orders, order events, fills, trades, equity marks and events |
 | 9 | Results appear on a web dashboard | [x] |
 | 10 | Automated tests pass | [x] reverified after each integration milestone |
@@ -132,6 +133,10 @@ Stage 3 and Stage 4 remain blocked.
 - [x] official-source content change detector and unapproved proposal/alert artifacts
 - [x] reviewed source-text hash baselines captured from official help content and verified
   unchanged on 2026-08-22
+- [x] 2026-08-24 detector run emitted alerts/unapproved proposals after four official
+  pages changed; profiles and reviewed baselines were not silently mutated
+- [ ] human review the four changed pages, resolve ambiguity, and—only if approved—create
+  new dated profiles/baselines; current profiles are stale for Stage 2+
 
 ## M14 — Three-layer and broker-authoritative risk
 
@@ -140,10 +145,21 @@ Stage 3 and Stage 4 remain blocked.
 - [x] explicit PropFirmRiskGate consuming selected profile/phase
 - [x] EOD HWM/floor/lock, DLL escalation, internal buffer, contracts, consistency/payout
 - [x] broker guard fetches fresh account/positions/orders and reserves worst-case risk
-- [ ] persisted/reconciled risk state keeps restart locked until authoritative recovery
+- [x] versioned durable personal-risk state uses exact bindings, one-time bootstrap,
+  fsync/atomic replace, advisory writer locks, revisions/CAS, and fresh-snapshot recovery
+- [x] durable pending-entry reservation binds account/route/order ids and preserves
+  monotonic cumulative-fill evidence across restart and stale writers
 - [x] typed order purpose and non-forgeable approvals bind the full canonical order/risk state
 - [x] protective stop cannot be removed/widened; replace-before-cancel or flatten
-- [ ] conservative post-gap/slippage/fee risk stays at or below $200
+- [x] quantity derives from worst signed entry-to-stop risk plus protective-stop gap,
+  round-trip commission, and stressed exit-slippage reserves; unbounded STOP/STOP_LIMIT
+  entries fail closed and realized envelope breaches latch the kill switch
+- [x] every entry is a bounded IOC limit; strategy geometry and minimum R:R are repriced
+  at the final signed executable bound before approval and verification
+- [ ] Stage 2 adapter proves atomic protected entry, authoritative full-session execution
+  replay, and venue-backed account-owner fencing; every shipped adapter remains blocked
+- [ ] realized loss cannot be hard-capped through a stop gap; retain the model limitation,
+  safety buffer, emergency flatten, and stressed survival tests
 
 ## M15 — Backtest safety hardening
 
@@ -170,14 +186,18 @@ Stage 3 and Stage 4 remain blocked.
 - [x] human-approved, hash-bound deployment manifest gate for Stage 3/4
 - [x] production env overrides can tighten but never weaken pinned risk
 - [x] Tradeify bot ownership/exclusivity/proof attestations in the manifest gate
+- [x] Stage 2+ constructor refuses non-durable/bootstrap-in-process/unbound/unpinned risk
+  state and adapters missing protected-entry, replay, or owner-fencing capabilities
 - [ ] approved platform-native Evaluation route verified; Tradovate API remains blocked
 
 ## M18 — Operator loop and reporting
 
-- [x] paper/replay runner and CLI (`market-replay`; journal + per-session reports)
+- [x] replay runner and CLI (`market-replay`; journal + per-session reports); Stage 2 paper remains blocked
 - [x] dashboard shows complete prop/bot/current-trade/statistics state plus STOP
 - [x] deterministic daily session report and abnormality flags (runner wiring pending)
 - [x] deterministic weekly accepted/rejected-trade and survival research report (runner wiring pending)
-- [x] daily official-rule verification record/alert command; broker-dependency polling pending
+- [x] daily official-rule verification record/alert command; 2026-08-24 and 2026-08-25
+  changed-page alerts demonstrated fail-closed behaviour, with the latter adding the
+  shared Daily Loss Limit page; broker-dependency polling pending
 - [x] clean-machine verification (uv and pip, 866 passed / 3 skipped)
 - [ ] live-runner wiring for the daily/weekly reporting and rule-polling commands

@@ -1,6 +1,7 @@
 # Limitations and live-readiness blockers
 
-Status checked: 2026-08-22.
+Status checked: 2026-08-24. The last human-reviewed official-rule baseline remains
+2026-08-22; the 2026-08-24 result is a change alert, not a replacement verification.
 
 The repository is a Stage 0 research system. It is not approved for a Tradeify evaluation,
 funded account, or unattended live order routing. Passing tests demonstrates specified
@@ -21,11 +22,21 @@ software behaviour, not a trading edge or permission to trade.
 3. **Profiles deliberately contain unresolved source conflicts.** The safest current
    deadlines are encoded for research, but any ambiguity blocks Stage 3/4 until a human
    resolves it with current official support/documentation.
-4. **No human deployment approval has been issued.** The fail-closed manifest mechanism
+4. **Every current profile is stale after an official-source change alert.** On
+   2026-08-24, content changed on the Growth Evaluation, Lightning Funded Accounts,
+   Select Evaluation, and Select funded/payout pages. Hash changes do not identify or
+   approve a rule change. The 2026-08-22 profiles/baselines remain unchanged and cannot
+   authorize Stage 2+ until human review produces a new versioned, tested profile.
+5. **No shipped adapter meets the Stage 2 recovery contract.** Stage 2+ requires atomic
+   protected entry, reduce-only close semantics, authoritative cancel/terminal state and
+   complete firm-session execution replay, plus account-owner fencing. The simulator
+   lacks durable session replay and owner fencing; the Tradovate seam lacks additional
+   native protections. Constructor gates refuse both.
+6. **No human deployment approval has been issued.** The fail-closed manifest mechanism
    exists, but the checked-in example carries no authority. Stage 3/4 additionally require
    current unchanged rule verification, exact artifact hashes, a clean repository, an
    approved account/phase and execution route, and immutable production artifacts.
-5. **Paper and replay operation has not completed the required observation period.** No
+7. **Paper and replay operation has not completed the required observation period.** No
    stage may be skipped automatically.
 
 ## Execution and broker limits
@@ -34,6 +45,15 @@ software behaviour, not a trading edge or permission to trade.
   replacement can briefly leave two same-OCO stops, and a cancel failure can leave a
   duplicate working order. The engine keeps the older stop until the replacement is
   accepted and flattens on missing initial protection, but venue atomicity is unavailable.
+- Cancellation and emergency flattening retain a time-of-check/time-of-use race. An entry
+  can fill after its snapshot but before cancellation, and another owner can change
+  exposure between a flatten snapshot and submission. Durable reservations preserve the
+  uncertainty; recovery confirmation now requires successful full guarded reconciliation
+  followed by two order-to-position flat/no-working-order passes, and the simulator caps
+  reductions through flat. Those sequential reads still cannot exclude a second owner
+  submitting and filling entirely between reads. Only venue-native atomic protection,
+  reduce-only semantics, and account-owner fencing close this class of race for an
+  external route, so Stage 2 remains blocked.
 - Emergency flatten submission cannot guarantee a fill while a broker or network is
   disconnected. This is an unavoidable external-system risk, not a reason to relax the
   fail-safe response.
@@ -48,16 +68,18 @@ software behaviour, not a trading edge or permission to trade.
   production integrated. Unknown holiday state rejects entries; the ordinary research
   session is intentionally narrower than the firm's outer window.
 - The final guard reads account, orders, and positions immediately before entry,
-  serializes entry verification/submission, and keeps a conservative pending-entry
-  reservation. The reads are sequential rather than a broker-versioned atomic snapshot;
-  reservations are process-local, not durable across restart; and an outcome-unknown
-  submission intentionally stays locked for human reconciliation.
-- Broker/account identity is currently trust-on-first-use within each `RiskEngine`
-  process. A Stage 3/4 runner must pin and verify the manifest's exact account identifier
-  before this is considered sufficient for deployment.
-- Reconciliation currently imports broker equity and checks all visible positions and
-  working orders. It does not yet reconstruct firm-session daily P&L, risk reservations,
-  or protective-order provenance from an account-wide durable ledger.
+  serializes entry verification/submission, and stores a durable conservative
+  pending-entry reservation. The reads remain sequential rather than a broker-versioned
+  atomic snapshot. An outcome-unknown or incompletely replayed submission intentionally
+  stays locked.
+- Stage 2+ requires exact broker/account/paper/route pins and a canonical material-runtime
+  context. This prevents accidental identity drift, but it cannot detect a second process
+  trading the same account; venue-backed owner fencing is still absent.
+- Reconciliation imports broker equity and visible positions/orders, while durable ledgers
+  retain local daily state and cumulative fill evidence. No shipped adapter can yet replay
+  an authoritative account-wide firm-session execution cursor with complete protective
+  provenance. The personal-risk and pending-entry files are also separate fail-closed
+  transactions, not one atomic commit with the broker.
 
 ## Risk-model limits
 
@@ -66,9 +88,12 @@ software behaviour, not a trading edge or permission to trade.
   `PropAccountState`.
 - Commission schedules and exchange/regulatory fees can change. Configured costs are
   assumptions and must be refreshed and stress-tested before each research report.
-- Slippage is a model input, not a bound. A gap can lose more than the planned $200. The
-  system rejects planned risk above $200 and models adverse movement, but no stop order can
-  mathematically guarantee a maximum realized loss.
+- Slippage is a model input, not a bound. Sizing includes the worst permitted entry limit,
+  an eight-tick protective-stop gap reserve, round-trip commission, and stressed exit
+  slippage, and rejects all-in planned risk above $200. A realized loss above its approved
+  pro-rata envelope latches the kill switch, but that is detection rather than prevention.
+  A larger gap through the protective stop, changed fees, or worse liquidity can still
+  lose more than $200; no stop order can mathematically guarantee a maximum realized loss.
 - Firm dashboards may calculate balance, consistency, winning days, or contract scaling
   differently during corrections. The official profile must be reverified and the broker
   account reconciled before relying on local status.

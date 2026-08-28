@@ -225,7 +225,51 @@ class StrategyGate:
             )
         )
 
-        entry = getattr(intent, "reference_price", None)
+        geometry_checks, expected_rr = self._geometry_checks(
+            intent,
+            getattr(intent, "reference_price", None),
+        )
+        checks.extend(geometry_checks)
+
+        return StrategyGateDecision(tuple(checks), expected_rr)
+
+    def reprice_for_execution(
+        self,
+        decision: StrategyGateDecision,
+        intent: OrderIntent,
+        *,
+        entry_price: float,
+    ) -> StrategyGateDecision:
+        """Recheck the complete Layer-1 trace at the signed executable entry bound.
+
+        Strategy setup logic describes reward:risk from a signal reference. Personal risk
+        may permit an adverse entry gap, so that reference is not the worst price the
+        venue can execute. Replacing the geometry checks after sizing keeps the trace
+        honest and prevents a nominal 2R setup from becoming sub-2R at the signed limit.
+        """
+        if not isinstance(decision, StrategyGateDecision):
+            raise TypeError("decision must be a StrategyGateDecision")
+        replacements, expected_rr = self._geometry_checks(intent, entry_price)
+        by_code = {check.code: check for check in replacements}
+        replaced_codes: set[str] = set()
+        checks: list[StrategyGateCheck] = []
+        for check in decision.checks:
+            replacement = by_code.get(check.code)
+            if replacement is None:
+                checks.append(check)
+            else:
+                checks.append(replacement)
+                replaced_codes.add(check.code)
+        if replaced_codes != set(by_code):
+            raise ValueError("base strategy decision has an incomplete geometry trace")
+        return StrategyGateDecision(tuple(checks), expected_rr)
+
+    def _geometry_checks(
+        self,
+        intent: OrderIntent,
+        entry: Any,
+    ) -> tuple[list[StrategyGateCheck], float | None]:
+        """Build the price/stop/target checks for one candidate execution price."""
         stop = getattr(intent, "stop_price", None)
         target = getattr(intent, "target_price", None)
 
@@ -234,18 +278,18 @@ class StrategyGate:
         target_present = target is not None
         target_valid = self._valid_price(target)
 
-        checks.append(self._price_check("entry_price", entry, entry_valid))
-        checks.append(self._price_check("stop_price", stop, stop_valid))
-        checks.append(
+        checks = [
+            self._price_check("entry_price", entry, entry_valid),
+            self._price_check("stop_price", stop, stop_valid),
             StrategyGateCheck(
                 "target_present",
                 target_present,
                 "target is present" if target_present else "target omission is not permitted",
                 observed=target,
                 required="explicit target price",
-            )
-        )
-        checks.append(self._price_check("target_price", target, target_valid))
+            ),
+            self._price_check("target_price", target, target_valid),
+        ]
 
         stop_distance: float | None = None
         distance_valid = False
@@ -307,8 +351,7 @@ class StrategyGate:
                 required=self.minimum_expected_rr,
             )
         )
-
-        return StrategyGateDecision(tuple(checks), expected_rr)
+        return checks, expected_rr
 
     def _valid_price(self, value: Any) -> bool:
         if not _positive_finite(value):

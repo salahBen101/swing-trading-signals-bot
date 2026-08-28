@@ -85,6 +85,7 @@ class AuthoritativeBrokerSnapshot:
     captured_at: datetime
     broker_name: str
     broker_is_paper: bool
+    execution_route: str
     account: BrokerRiskAccount
     positions: tuple[BrokerRiskPosition, ...]
     orders: tuple[BrokerRiskOrder, ...]
@@ -103,6 +104,7 @@ class AuthoritativeBrokerSnapshot:
             "captured_at": self.captured_at.isoformat(),
             "broker_name": self.broker_name,
             "broker_is_paper": self.broker_is_paper,
+            "execution_route": self.execution_route,
             "account": self.account.to_dict(),
             "positions": [position.to_dict() for position in self.positions],
             "orders": [order.to_dict() for order in self.orders],

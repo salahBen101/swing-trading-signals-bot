@@ -31,7 +31,7 @@ from tradebot.config import (
     BrokerConfig,
 )
 from tradebot.core.clock import MARKET_TZ
-from tradebot.core.models import Trade
+from tradebot.core.models import OrderIntent, Trade
 from tradebot.core.types import ExitReason, Side
 from tradebot.data.splits import Split
 from tradebot.features.pipeline import FeatureFrame, FeatureSpec, build_features
@@ -90,8 +90,55 @@ class OneShotStrategy(Strategy):
             return None
         close = float(ctx.bar["close"])
         return self._make_intent(
-            ctx, Side.BUY, close - 100.0, target_price=close + 100.0,
+            ctx, Side.BUY, close - 100.0, target_price=close + 250.0,
             conditions=("one_shot",),
+        )
+
+
+class ReferenceOnlyTwoRStrategy(Strategy):
+    """Exactly 2R at signal price but sub-2R at the signed adverse entry bound."""
+
+    def __init__(self, signal_index: int = 5) -> None:
+        super().__init__(StrategySpec(
+            name="reference_only_two_r",
+            description="execution-geometry regression",
+            entry_conditions=("reference_only_two_r",),
+            invalidation_conditions=(),
+            stop_loss="10 points",
+            profit_target="20 points",
+            filters=(),
+            max_trades_per_session=1,
+        ))
+        self.signal_index = signal_index
+
+    def _entry_signal(self, ctx):
+        if ctx.i != self.signal_index:
+            return None
+        close = float(ctx.bar["close"])
+        return self._make_intent(
+            ctx,
+            Side.BUY,
+            close - 10.0,
+            target_price=close + 20.0,
+            conditions=("reference_only_two_r",),
+        )
+
+
+class OffTickStopStrategy(ReferenceOnlyTwoRStrategy):
+    """Malicious/buggy inert intent that bypasses Strategy._make_intent rounding."""
+
+    def _entry_signal(self, ctx):
+        if ctx.i != self.signal_index:
+            return None
+        return OrderIntent(
+            timestamp=ctx.timestamp,
+            instrument="MNQ",
+            side=Side.BUY,
+            strategy="off_tick_stop",
+            stop_price=17_989.9,
+            target_price=18_030.0,
+            reference_price=18_000.0,
+            conditions=("off_tick_stop",),
         )
 
 
@@ -305,6 +352,78 @@ def test_a_backtest_runs_and_reports_its_dataset(sample_bars):
     assert len(result.equity_curve) == len(sample_bars)
     assert result.split == "dev"
     assert result.ended_flat and result.working_orders_at_end == 0
+
+
+def test_standard_backtest_rejects_subminimum_signed_execution_geometry():
+    index = pd.date_range(
+        "2022-04-01 10:00",
+        periods=20,
+        freq="1min",
+        tz=MARKET_TZ,
+        name="timestamp",
+    )
+    bars = pd.DataFrame(
+        {
+            "open": [18_000.0] * len(index),
+            "high": [18_000.5] * len(index),
+            "low": [17_999.5] * len(index),
+            "close": [18_000.0] * len(index),
+            "volume": [100.0] * len(index),
+        },
+        index=index,
+    )
+    strategy = ReferenceOnlyTwoRStrategy()
+    computed = build_features(bars, strategy.features)
+    result = run_backtest(
+        bars,
+        strategy,
+        a_config(),
+        minimum_expected_rr=2.0,
+        features=FeatureFrame(computed.frame, computed.spec, warmup_bars=0),
+    )
+
+    assert result.trades == []
+    assert any(
+        rejection.reason.value == "INVALID_ORDER"
+        and "signed execution reward:risk" in rejection.detail
+        for rejection in result.rejections
+    )
+
+
+def test_standard_backtest_rejects_off_tick_protection_before_submission():
+    index = pd.date_range(
+        "2022-04-01 10:00",
+        periods=20,
+        freq="1min",
+        tz=MARKET_TZ,
+        name="timestamp",
+    )
+    bars = pd.DataFrame(
+        {
+            "open": [18_000.0] * len(index),
+            "high": [18_000.5] * len(index),
+            "low": [17_999.5] * len(index),
+            "close": [18_000.0] * len(index),
+            "volume": [100.0] * len(index),
+        },
+        index=index,
+    )
+    strategy = OffTickStopStrategy()
+    computed = build_features(bars, strategy.features)
+
+    result = run_backtest(
+        bars,
+        strategy,
+        a_config(),
+        features=FeatureFrame(computed.frame, computed.spec, warmup_bars=0),
+    )
+
+    assert result.trades == []
+    assert any(
+        rejection.reason.value == "INVALID_ORDER"
+        and "protective stop" in rejection.detail
+        for rejection in result.rejections
+    )
 
 
 @pytest.mark.parametrize("name", known_strategies())

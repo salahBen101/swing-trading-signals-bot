@@ -286,6 +286,23 @@ def test_minimum_reward_risk_boundary_passes(gate):
     assert decision.check("minimum_expected_rr").passed
 
 
+def test_signed_adverse_entry_bound_is_used_for_final_reward_risk(gate):
+    intent = an_intent(stop=17_999.0, target=18_002.0)
+    signal_decision = evaluate(gate, intent)
+
+    repriced = gate.reprice_for_execution(
+        signal_decision,
+        intent,
+        entry_price=18_000.25,
+    )
+
+    assert signal_decision.expected_reward_risk == pytest.approx(2.0)
+    assert repriced.expected_reward_risk == pytest.approx(1.4)
+    assert repriced.check("entry_price").observed == 18_000.25
+    assert not repriced.check("minimum_expected_rr").passed
+    assert not repriced.approved
+
+
 def test_one_tick_below_minimum_reward_risk_fails(gate):
     decision = evaluate(gate, an_intent(stop=17_999.0, target=18_001.75))
     assert decision.expected_reward_risk == pytest.approx(1.75)
@@ -331,4 +348,4 @@ def test_strategy_gate_has_no_broker_or_execution_dependency():
     assert "broker" not in names
     assert "execution" not in names
     public = {name for name in dir(module.StrategyGate) if not name.startswith("_")}
-    assert public == {"evaluate"}
+    assert public == {"evaluate", "reprice_for_execution"}

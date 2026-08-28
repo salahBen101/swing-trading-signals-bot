@@ -8,6 +8,7 @@ from .stages import (
     artifact_sha256,
     authorize_stage,
     load_approval_manifest,
+    stage_authorization_failure_codes,
 )
 
 __all__ = [
@@ -18,5 +19,5 @@ __all__ = [
     "artifact_sha256",
     "authorize_stage",
     "load_approval_manifest",
+    "stage_authorization_failure_codes",
 ]
-

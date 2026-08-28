@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+import tradebot.deployment.stages as stages_module
 
 from tradebot.deployment import (
     ApprovalManifest,
@@ -14,6 +15,7 @@ from tradebot.deployment import (
     artifact_sha256,
     authorize_stage,
     load_approval_manifest,
+    stage_authorization_failure_codes,
 )
 from tradebot.prop_firms import load_prop_profile
 from tradebot.prop_firms import RuleVerificationResult, SourceCheck, VerificationStatus
@@ -56,7 +58,10 @@ def manifest(stage: DeploymentStage = DeploymentStage.PROP_EVALUATION, phase: st
 
 
 def authorize(m: ApprovalManifest, **overrides):
-    profile = replace(load_prop_profile(PROFILE_PATH), ambiguity_notes=())
+    profile = overrides.pop(
+        "authorization_profile",
+        replace(load_prop_profile(PROFILE_PATH), ambiguity_notes=()),
+    )
     digest = "a" * 64
     verification = RuleVerificationResult(
         profile_id=profile.profile_id,
@@ -67,21 +72,42 @@ def authorize(m: ApprovalManifest, **overrides):
             for source in profile.sources
         ),
     )
+    verification = overrides.pop("authorization_verification", verification)
     args = dict(
         stage=m.stage,
         as_of=NOW,
-        profile=profile,
         profile_path=PROFILE_PATH,
         source_snapshot_path=SNAPSHOT_PATH,
         runtime_config_path=CONFIG_PATH,
         strategy_artifact_path=STRATEGY_PATH,
         manifest=m,
-        rule_verification=verification,
-        code_revision=HEAD_REVISION,
-        working_tree_clean=True,
     )
     args.update(overrides)
-    return authorize_stage(**args)
+    environment = stages_module._AuthorizationEnvironment(
+        now=args["as_of"],
+        code_revision=(
+            OTHER_REVISION
+            if overrides.get("repository_revision_mismatch", False)
+            else HEAD_REVISION
+        ),
+        working_tree_clean=not overrides.get("repository_dirty", False),
+    )
+    args.pop("repository_revision_mismatch", None)
+    args.pop("repository_dirty", None)
+    original = stages_module._read_authorization_environment
+    original_profile_loader = stages_module._load_authorization_profile
+    original_verifier = stages_module._run_authorization_rule_verification
+    stages_module._read_authorization_environment = lambda: environment
+    stages_module._load_authorization_profile = lambda path: profile
+    stages_module._run_authorization_rule_verification = (
+        lambda loaded, path, *, checked_at: verification
+    )
+    try:
+        return authorize_stage(**args)
+    finally:
+        stages_module._read_authorization_environment = original
+        stages_module._load_authorization_profile = original_profile_loader
+        stages_module._run_authorization_rule_verification = original_verifier
 
 
 @pytest.mark.parametrize("stage", [
@@ -118,6 +144,68 @@ def test_exact_clean_human_approved_stage_three_manifest_can_pass_the_generic_ga
     assert decision.allowed, decision.reason
     assert decision.account_id == approved_manifest.account_id
     assert decision.execution_route == approved_manifest.execution_route
+    assert stage_authorization_failure_codes(
+        decision,
+        stage=DeploymentStage.PROP_EVALUATION,
+        as_of=NOW,
+    ) == ()
+
+
+def test_constructed_or_modified_live_authorization_is_not_a_capability() -> None:
+    constructed = StageAuthorization(
+        DeploymentStage.PROP_EVALUATION,
+        True,
+        (),
+        account_id="ACCOUNT-EXAMPLE",
+    )
+    constructed_failures = stage_authorization_failure_codes(
+        constructed,
+        stage=DeploymentStage.PROP_EVALUATION,
+        as_of=NOW,
+    )
+    assert "stage_authorization_unauthenticated" in constructed_failures
+
+    approved = authorize(manifest())
+    modified = replace(approved, account_id="DIFFERENT-ACCOUNT")
+    modified_failures = stage_authorization_failure_codes(
+        modified,
+        stage=DeploymentStage.PROP_EVALUATION,
+        as_of=NOW,
+    )
+    assert modified_failures == ("stage_authorization_unauthenticated",)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"stage": object()},
+        {"reasons": (object(),)},
+        {"_signature": object()},
+    ],
+)
+def test_corrupt_live_authorization_fails_closed_without_raising(changes) -> None:
+    corrupt = replace(authorize(manifest()), **changes)
+
+    failures = stage_authorization_failure_codes(
+        corrupt,
+        stage=DeploymentStage.PROP_EVALUATION,
+        as_of=NOW,
+    )
+
+    assert "stage_authorization_malformed" in failures
+    assert "stage_authorization_unauthenticated" in failures
+
+
+def test_live_authorization_expires_after_its_bounded_window() -> None:
+    approved = authorize(manifest())
+
+    failures = stage_authorization_failure_codes(
+        approved,
+        stage=DeploymentStage.PROP_EVALUATION,
+        as_of=NOW + timedelta(minutes=5),
+    )
+
+    assert failures == ("stage_authorization_expired",)
 
 
 def test_invalid_manifest_cannot_supply_authorized_identity() -> None:
@@ -130,11 +218,34 @@ def test_invalid_manifest_cannot_supply_authorized_identity() -> None:
     assert decision.execution_route is None
 
 
+def test_naive_manifest_timestamp_fails_closed_without_raising() -> None:
+    decision = authorize(replace(manifest(), approved_at=NOW.replace(tzinfo=None)))
+
+    assert not decision.allowed
+    assert "approved_at must be timezone-aware" in decision.reason
+
+
+def test_direct_manifest_construction_cannot_use_truthy_string_flags() -> None:
+    string_flags = replace(
+        manifest(),
+        approved="false",
+        execution_route_verified="false",
+        sole_owner_attested="false",
+        firm_exclusive_use_attested="false",
+        production_frozen="false",
+    )
+
+    decision = authorize(string_flags)
+
+    assert not decision.allowed
+    assert "must be true or false" in decision.reason
+
+
 def test_checked_in_tradeify_conflicts_keep_stage_three_blocked() -> None:
     m = manifest()
     decision = authorize(
         m,
-        profile=load_prop_profile(PROFILE_PATH),
+        authorization_profile=load_prop_profile(PROFILE_PATH),
     )
     assert not decision.allowed
     assert "unresolved rule conflicts" in decision.reason
@@ -142,9 +253,9 @@ def test_checked_in_tradeify_conflicts_keep_stage_three_blocked() -> None:
 
 def test_stage_three_requires_complete_unchanged_current_source_verification() -> None:
     m = manifest()
-    missing = authorize(m, rule_verification=None)
+    missing = authorize(m, authorization_verification=None)
     assert not missing.allowed
-    assert "no current official-source verification" in missing.reason
+    assert "verification result is missing or invalid" in missing.reason
 
     changed = RuleVerificationResult(
         profile_id=m.prop_profile_id,
@@ -152,7 +263,7 @@ def test_stage_three_requires_complete_unchanged_current_source_verification() -
         status=VerificationStatus.CHANGED,
         checks=(),
     )
-    rejected = authorize(m, rule_verification=changed)
+    rejected = authorize(m, authorization_verification=changed)
     assert not rejected.allowed
     assert "not unchanged" in rejected.reason
     assert "does not cover every profile source" in rejected.reason
@@ -170,8 +281,8 @@ def test_stale_rules_dirty_tree_and_revision_mismatch_each_fail_closed() -> None
     decision = authorize(
         m,
         as_of=datetime(2026, 8, 23, 0, 0, 1, tzinfo=timezone.utc),
-        working_tree_clean=False,
-        code_revision=OTHER_REVISION,
+        repository_dirty=True,
+        repository_revision_mismatch=True,
     )
     assert not decision.allowed
     assert "stale" in decision.reason
@@ -191,6 +302,17 @@ def test_stage_four_requires_a_funded_phase() -> None:
     decision = authorize(evaluation_manifest)
     assert not decision.allowed
     assert "funded-phase" in decision.reason
+
+
+def test_exact_clean_human_approved_stage_four_manifest_mints_a_valid_capability() -> None:
+    decision = authorize(manifest(DeploymentStage.FUNDED, "sim_funded"))
+
+    assert decision.allowed, decision.reason
+    assert stage_authorization_failure_codes(
+        decision,
+        stage=DeploymentStage.FUNDED,
+        as_of=NOW,
+    ) == ()
 
 
 def test_artifact_hash_mismatch_blocks_startup(tmp_path: Path) -> None:

@@ -169,13 +169,18 @@ class BrokerCapabilities:
 
     These flags describe behaviour that is actually implemented and verified.  They are
     not aspirations: an adapter must advertise ``False`` until the corresponding native
-    order semantics and terminal-state reconciliation exist.
+    order semantics and terminal-state reconciliation exist. They are necessary evidence,
+    not permission by themselves; the guarded execution path may impose a hard stage block
+    until it actually consumes those semantics atomically.
     """
 
     external_execution: bool
     server_side_oco: bool
     reduce_only_or_close_position: bool
     authoritative_cancel_status: bool
+    exact_terminal_order_history: bool = False
+    authoritative_session_execution_history: bool = False
+    account_owner_fencing: bool = False
 
     @property
     def stage_2_protection_safe(self) -> bool:
@@ -183,6 +188,17 @@ class BrokerCapabilities:
             self.server_side_oco
             and self.reduce_only_or_close_position
             and self.authoritative_cancel_status
+        )
+
+    @property
+    def stage_2_recovery_safe(self) -> bool:
+        """Whether crash recovery and concurrent ownership are proven for paper trading."""
+
+        return (
+            self.stage_2_protection_safe
+            and self.exact_terminal_order_history
+            and self.authoritative_session_execution_history
+            and self.account_owner_fencing
         )
 
 
@@ -200,6 +216,7 @@ class BrokerAdapter(Protocol):
 
     name: str
     is_paper: bool
+    execution_route: str
     capabilities: BrokerCapabilities
 
     def connect(self) -> None: ...
