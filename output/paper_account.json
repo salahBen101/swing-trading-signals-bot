@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 29360.0,
+  "cash": 48690.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -20,15 +20,15 @@
       "cost": 3755.0,
       "feat": {},
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 355.5899963378906,
-      "last_mid": 13.875,
-      "last_bid": 13.6,
-      "days_held": 8,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 371.5400085449219,
+      "last_mid": 20.75,
+      "last_bid": 20.75,
+      "days_held": 9,
+      "exit_date": "2026-08-27",
+      "exit_bid": 20.75,
+      "exit_reason": "RSI(2) 85.7 > 65",
+      "proceeds": 2075.0,
       "stale": false,
       "marks": [
         [
@@ -75,6 +75,11 @@
           "2026-08-26",
           355.5899963378906,
           13.875
+        ],
+        [
+          "2026-08-27",
+          371.5400085449219,
+          20.75
         ]
       ]
     },
@@ -225,15 +230,15 @@
       "cost": 2845.0,
       "feat": {},
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 339.30999755859375,
-      "last_mid": 18.0,
-      "last_bid": 16.3,
-      "days_held": 5,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 382.8500061035156,
+      "last_mid": 47.0,
+      "last_bid": 47.0,
+      "days_held": 6,
+      "exit_date": "2026-08-27",
+      "exit_bid": 47.0,
+      "exit_reason": "RSI(2) 90.7 > 65",
+      "proceeds": 4700.0,
       "stale": false,
       "marks": [
         [
@@ -265,6 +270,11 @@
           "2026-08-26",
           339.30999755859375,
           18.0
+        ],
+        [
+          "2026-08-27",
+          382.8500061035156,
+          47.0
         ]
       ]
     },
@@ -341,10 +351,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 74.58000183105469,
-      "last_mid": 2.9899999999999998,
-      "last_bid": 1.43,
-      "days_held": 5,
+      "last_spot": 74.3499984741211,
+      "last_mid": 2.79,
+      "last_bid": 2.79,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -380,6 +390,11 @@
           "2026-08-26",
           74.58000183105469,
           2.9899999999999998
+        ],
+        [
+          "2026-08-27",
+          74.3499984741211,
+          2.79
         ]
       ]
     },
@@ -651,15 +666,15 @@
         "mkt_above_200": 7.844000183642552
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 209.66000366210938,
-      "last_mid": 12.8,
-      "last_bid": 12.55,
-      "days_held": 4,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 227.97999572753906,
+      "last_mid": 25.0,
+      "last_bid": 25.0,
+      "days_held": 5,
+      "exit_date": "2026-08-27",
+      "exit_bid": 25.0,
+      "exit_reason": "RSI(2) 87.8 > 65",
+      "proceeds": 7500.0,
       "stale": false,
       "marks": [
         [
@@ -686,6 +701,11 @@
           "2026-08-26",
           209.66000366210938,
           12.8
+        ],
+        [
+          "2026-08-27",
+          227.97999572753906,
+          25.0
         ]
       ]
     },
@@ -715,15 +735,15 @@
         "mkt_above_200": 7.8369424522749975
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 261.7699890136719,
-      "last_mid": 16.75,
-      "last_bid": 16.05,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 266.5400085449219,
+      "last_mid": 16.85,
+      "last_bid": 16.85,
+      "days_held": 3,
+      "exit_date": "2026-08-27",
+      "exit_bid": 16.85,
+      "exit_reason": "RSI(2) 85.9 > 65",
+      "proceeds": 5055.000000000001,
       "stale": false,
       "marks": [
         [
@@ -740,6 +760,11 @@
           "2026-08-26",
           261.7699890136719,
           16.75
+        ],
+        [
+          "2026-08-27",
+          266.5400085449219,
+          16.85
         ]
       ]
     },
@@ -824,10 +849,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 479.760009765625,
-      "last_mid": 17.7,
-      "last_bid": 17.2,
-      "days_held": 1,
+      "last_spot": 482.3599853515625,
+      "last_mid": 16.8,
+      "last_bid": 16.8,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -843,6 +868,11 @@
           "2026-08-26",
           479.760009765625,
           17.7
+        ],
+        [
+          "2026-08-27",
+          482.3599853515625,
+          16.8
         ]
       ]
     }
@@ -889,6 +919,13 @@
       "cash": 29360.0,
       "open": 6,
       "realised": 685.0
+    },
+    {
+      "date": "2026-08-27",
+      "equity": 52329.0,
+      "cash": 48690.0,
+      "open": 2,
+      "realised": 2915.0
     }
   ],
   "missed": [
@@ -899,5 +936,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 1/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 4/40 closed trades. It will not score anything until it has a real sample."
 }
