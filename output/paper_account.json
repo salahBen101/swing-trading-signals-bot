@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 48690.0,
+  "cash": 42762.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -351,10 +351,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 74.3499984741211,
-      "last_mid": 2.79,
-      "last_bid": 2.79,
-      "days_held": 6,
+      "last_spot": 74.30000305175781,
+      "last_mid": 3.0599999999999996,
+      "last_bid": 2.57,
+      "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -395,6 +395,11 @@
           "2026-08-27",
           74.3499984741211,
           2.79
+        ],
+        [
+          "2026-08-28",
+          74.30000305175781,
+          3.0599999999999996
         ]
       ]
     },
@@ -849,10 +854,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 482.3599853515625,
-      "last_mid": 16.8,
-      "last_bid": 16.8,
-      "days_held": 2,
+      "last_spot": 461.6700134277344,
+      "last_mid": 8.675,
+      "last_bid": 8.2,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -873,6 +878,55 @@
           "2026-08-27",
           482.3599853515625,
           16.8
+        ],
+        [
+          "2026-08-28",
+          461.6700134277344,
+          8.675
+        ]
+      ]
+    },
+    {
+      "ticker": "PYPL",
+      "sector": "comms/other",
+      "tier": "retrospective",
+      "opened": "2026-08-28",
+      "entry_spot": 53.65999984741211,
+      "entry_rsi2": 1.2943548987699245,
+      "expiry": "2026-09-18",
+      "strike": 52.5,
+      "dte_at_entry": 21,
+      "contracts": 24,
+      "entry_ask": 2.47,
+      "entry_spread_pct": 11.563169164882229,
+      "entry_delta": 0.6276697674394642,
+      "cost": 5928.000000000001,
+      "feat": {
+        "rsi2": 1.2943548987699245,
+        "above_200": 4.62848402911713,
+        "below_5": -10.831201974215166,
+        "vol20": 3.2109283964267004,
+        "ret5": -12.818845633547472,
+        "off_high": -29.515300429092072,
+        "breadth": 2.0,
+        "mkt_above_200": 8.382621624778608
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 53.65999984741211,
+      "last_mid": 2.335,
+      "last_bid": 2.2,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-08-28",
+          53.65999984741211,
+          2.335
         ]
       ]
     }
@@ -926,6 +980,13 @@
       "cash": 48690.0,
       "open": 2,
       "realised": 2915.0
+    },
+    {
+      "date": "2026-08-28",
+      "equity": 50407.0,
+      "cash": 42762.0,
+      "open": 3,
+      "realised": 2915.0
     }
   ],
   "missed": [
@@ -933,8 +994,13 @@
       "date": "2026-08-24",
       "ticker": "SMH",
       "why": "no slots"
+    },
+    {
+      "date": "2026-08-28",
+      "ticker": "XLRE",
+      "why": "no contract in budget"
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 4/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 6/40 closed trades. It will not score anything until it has a real sample."
 }
