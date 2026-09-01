@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 42762.0,
+  "cash": 39662.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -351,10 +351,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 73.55999755859375,
-      "last_mid": 2.45,
-      "last_bid": 2.23,
-      "days_held": 8,
+      "last_spot": 72.62000274658203,
+      "last_mid": 1.925,
+      "last_bid": 1.1,
+      "days_held": 9,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -405,6 +405,11 @@
           "2026-08-31",
           73.55999755859375,
           2.45
+        ],
+        [
+          "2026-09-01",
+          72.62000274658203,
+          1.925
         ]
       ]
     },
@@ -859,10 +864,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 458.3900146484375,
-      "last_mid": 6.425,
-      "last_bid": 6.25,
-      "days_held": 4,
+      "last_spot": 441.8500061035156,
+      "last_mid": 3.325,
+      "last_bid": 3.2,
+      "days_held": 5,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -893,6 +898,11 @@
           "2026-08-31",
           458.3900146484375,
           6.425
+        ],
+        [
+          "2026-09-01",
+          441.8500061035156,
+          3.325
         ]
       ]
     },
@@ -923,10 +933,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 52.665000915527344,
-      "last_mid": 1.58,
-      "last_bid": 1.41,
-      "days_held": 1,
+      "last_spot": 52.400001525878906,
+      "last_mid": 1.4100000000000001,
+      "last_bid": 1.22,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -942,6 +952,55 @@
           "2026-08-31",
           52.665000915527344,
           1.58
+        ],
+        [
+          "2026-09-01",
+          52.400001525878906,
+          1.4100000000000001
+        ]
+      ]
+    },
+    {
+      "ticker": "BLK",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-09-01",
+      "entry_spot": 1128.0999755859375,
+      "entry_rsi2": 2.8859402641976715,
+      "expiry": "2026-10-16",
+      "strike": 1160.0,
+      "dte_at_entry": 45,
+      "contracts": 1,
+      "entry_ask": 31.0,
+      "entry_spread_pct": 13.793103448275861,
+      "entry_delta": 0.42890717711314363,
+      "cost": 3100.0,
+      "feat": {
+        "rsi2": 2.8859402641976715,
+        "above_200": 6.636879066416146,
+        "below_5": -2.768943432187654,
+        "vol20": 1.2187569260787436,
+        "ret5": -3.7958068174117066,
+        "off_high": -6.1941303645888794,
+        "breadth": 4.0,
+        "mkt_above_200": 7.193543580259787
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 1128.0999755859375,
+      "last_mid": 29.0,
+      "last_bid": 27.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-01",
+          1128.0999755859375,
+          29.0
         ]
       ]
     }
@@ -1009,6 +1068,13 @@
       "cash": 42762.0,
       "open": 3,
       "realised": 2915.0
+    },
+    {
+      "date": "2026-09-01",
+      "equity": 46803.5,
+      "cash": 39662.0,
+      "open": 4,
+      "realised": 2915.0
     }
   ],
   "missed": [
@@ -1025,6 +1091,21 @@
     {
       "date": "2026-08-31",
       "ticker": "XLRE",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-01",
+      "ticker": "XLRE",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-01",
+      "ticker": "BKNG",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-01",
+      "ticker": "MDY",
       "why": "no contract in budget"
     }
   ],
