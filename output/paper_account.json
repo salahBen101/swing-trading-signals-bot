@@ -351,10 +351,10 @@
       "feat": {},
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 74.30000305175781,
-      "last_mid": 3.0599999999999996,
-      "last_bid": 2.57,
-      "days_held": 7,
+      "last_spot": 73.55999755859375,
+      "last_mid": 2.45,
+      "last_bid": 2.23,
+      "days_held": 8,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -400,6 +400,11 @@
           "2026-08-28",
           74.30000305175781,
           3.0599999999999996
+        ],
+        [
+          "2026-08-31",
+          73.55999755859375,
+          2.45
         ]
       ]
     },
@@ -854,10 +859,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 461.6700134277344,
-      "last_mid": 8.675,
-      "last_bid": 8.2,
-      "days_held": 3,
+      "last_spot": 458.3900146484375,
+      "last_mid": 6.425,
+      "last_bid": 6.25,
+      "days_held": 4,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -883,6 +888,11 @@
           "2026-08-28",
           461.6700134277344,
           8.675
+        ],
+        [
+          "2026-08-31",
+          458.3900146484375,
+          6.425
         ]
       ]
     },
@@ -913,10 +923,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 53.65999984741211,
-      "last_mid": 2.335,
-      "last_bid": 2.2,
-      "days_held": 0,
+      "last_spot": 52.665000915527344,
+      "last_mid": 1.58,
+      "last_bid": 1.41,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -927,6 +937,11 @@
           "2026-08-28",
           53.65999984741211,
           2.335
+        ],
+        [
+          "2026-08-31",
+          52.665000915527344,
+          1.58
         ]
       ]
     }
@@ -987,6 +1002,13 @@
       "cash": 42762.0,
       "open": 3,
       "realised": 2915.0
+    },
+    {
+      "date": "2026-08-31",
+      "equity": 48084.0,
+      "cash": 42762.0,
+      "open": 3,
+      "realised": 2915.0
     }
   ],
   "missed": [
@@ -997,6 +1019,11 @@
     },
     {
       "date": "2026-08-28",
+      "ticker": "XLRE",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-08-31",
       "ticker": "XLRE",
       "why": "no contract in budget"
     }
