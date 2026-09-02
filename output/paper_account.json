@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 39662.0,
+  "cash": 36665.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -350,15 +350,15 @@
       "cost": 425.0,
       "feat": {},
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 72.62000274658203,
-      "last_mid": 1.925,
-      "last_bid": 1.1,
-      "days_held": 9,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 74.23999786376953,
+      "last_mid": 3.7649999999999997,
+      "last_bid": 2.53,
+      "days_held": 10,
+      "exit_date": "2026-09-02",
+      "exit_bid": 2.53,
+      "exit_reason": "RSI(2) 70.4 > 65",
+      "proceeds": 252.99999999999997,
       "stale": false,
       "marks": [
         [
@@ -410,6 +410,11 @@
           "2026-09-01",
           72.62000274658203,
           1.925
+        ],
+        [
+          "2026-09-02",
+          74.23999786376953,
+          3.7649999999999997
         ]
       ]
     },
@@ -864,10 +869,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 441.8500061035156,
-      "last_mid": 3.325,
-      "last_bid": 3.2,
-      "days_held": 5,
+      "last_spot": 438.4599914550781,
+      "last_mid": 2.615,
+      "last_bid": 2.45,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -903,6 +908,11 @@
           "2026-09-01",
           441.8500061035156,
           3.325
+        ],
+        [
+          "2026-09-02",
+          438.4599914550781,
+          2.615
         ]
       ]
     },
@@ -933,10 +943,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 52.400001525878906,
-      "last_mid": 1.4100000000000001,
-      "last_bid": 1.22,
-      "days_held": 2,
+      "last_spot": 54.66999816894531,
+      "last_mid": 2.9,
+      "last_bid": 2.5,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -957,6 +967,11 @@
           "2026-09-01",
           52.400001525878906,
           1.4100000000000001
+        ],
+        [
+          "2026-09-02",
+          54.66999816894531,
+          2.9
         ]
       ]
     },
@@ -987,10 +1002,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 1128.0999755859375,
-      "last_mid": 29.0,
-      "last_bid": 27.0,
-      "days_held": 0,
+      "last_spot": 1107.0799560546875,
+      "last_mid": 20.950000000000003,
+      "last_bid": 18.3,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1001,6 +1016,55 @@
           "2026-09-01",
           1128.0999755859375,
           29.0
+        ],
+        [
+          "2026-09-02",
+          1107.0799560546875,
+          20.950000000000003
+        ]
+      ]
+    },
+    {
+      "ticker": "LRCX",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-09-02",
+      "entry_spot": 288.32000732421875,
+      "entry_rsi2": 4.38396142322722,
+      "expiry": "2026-10-16",
+      "strike": 270.0,
+      "dte_at_entry": 44,
+      "contracts": 1,
+      "entry_ask": 32.5,
+      "entry_spread_pct": 3.7617554858934152,
+      "entry_delta": 0.6797944317278691,
+      "cost": 3250.0,
+      "feat": {
+        "rsi2": 4.38396142322722,
+        "above_200": 11.160678351154507,
+        "below_5": -3.924714859582812,
+        "vol20": 2.9698898724624603,
+        "ret5": -7.849653916936161,
+        "off_high": -33.46409981804106,
+        "breadth": 2.0,
+        "mkt_above_200": 7.598655815034605
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 288.32000732421875,
+      "last_mid": 31.9,
+      "last_bid": 31.3,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-02",
+          288.32000732421875,
+          31.9
         ]
       ]
     }
@@ -1075,6 +1139,13 @@
       "cash": 39662.0,
       "open": 4,
       "realised": 2915.0
+    },
+    {
+      "date": "2026-09-02",
+      "equity": 49433.0,
+      "cash": 36665.0,
+      "open": 4,
+      "realised": 2743.0
     }
   ],
   "missed": [
@@ -1106,6 +1177,11 @@
     {
       "date": "2026-09-01",
       "ticker": "MDY",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-02",
+      "ticker": "XLRE",
       "why": "no contract in budget"
     }
   ],
