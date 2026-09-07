@@ -1235,5 +1235,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 7/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 9/40 closed trades. It will not score anything until it has a real sample."
 }
