@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 52120.0,
+  "cash": 28040.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -1017,10 +1017,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 1095.3699951171875,
-      "last_mid": 17.200000000000003,
-      "last_bid": 15.8,
-      "days_held": 4,
+      "last_spot": 1072.030029296875,
+      "last_mid": 12.2,
+      "last_bid": 10.6,
+      "days_held": 5,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1051,6 +1051,11 @@
           "2026-09-08",
           1095.3699951171875,
           17.200000000000003
+        ],
+        [
+          "2026-09-09",
+          1072.030029296875,
+          12.2
         ]
       ]
     },
@@ -1105,6 +1110,182 @@
           "2026-09-04",
           307.6499938964844,
           46.95
+        ]
+      ]
+    },
+    {
+      "ticker": "ABNB",
+      "sector": "comms/other",
+      "tier": "retrospective",
+      "opened": "2026-09-09",
+      "entry_spot": 169.6300048828125,
+      "entry_rsi2": 3.3837723568985894,
+      "expiry": "2026-10-16",
+      "strike": 160.0,
+      "dte_at_entry": 37,
+      "contracts": 4,
+      "entry_ask": 14.35,
+      "entry_spread_pct": 12.199630314232907,
+      "entry_delta": 0.707992579018493,
+      "cost": 5740.0,
+      "feat": {
+        "rsi2": 3.3837723568985894,
+        "above_200": 21.18084339060502,
+        "below_5": -5.194380961386602,
+        "vol20": 2.0970127229961437,
+        "ret5": -7.074964209197332,
+        "off_high": -10.955378014271655,
+        "breadth": 4.0,
+        "mkt_above_200": 6.901314464913222
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 169.6300048828125,
+      "last_mid": 13.524999999999999,
+      "last_bid": 12.7,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-09",
+          169.6300048828125,
+          13.524999999999999
+        ]
+      ]
+    },
+    {
+      "ticker": "XBI",
+      "sector": "hlth ETF",
+      "tier": "retrospective",
+      "opened": "2026-09-09",
+      "entry_spot": 159.3800048828125,
+      "entry_rsi2": 4.014182050956293,
+      "expiry": "2026-10-16",
+      "strike": 160.0,
+      "dte_at_entry": 37,
+      "contracts": 10,
+      "entry_ask": 6.1,
+      "entry_spread_pct": 3.3333333333333215,
+      "entry_delta": 0.5225112803597125,
+      "cost": 6100.0,
+      "feat": {
+        "rsi2": 4.014182050956293,
+        "above_200": 17.339839082066135,
+        "below_5": -2.2052561526137326,
+        "vol20": 2.096433285262182,
+        "ret5": -2.4602136865553237,
+        "off_high": -5.998229422526613,
+        "breadth": 4.0,
+        "mkt_above_200": 6.901314464913222
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 159.3800048828125,
+      "last_mid": 6.0,
+      "last_bid": 5.9,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-09",
+          159.3800048828125,
+          6.0
+        ]
+      ]
+    },
+    {
+      "ticker": "MA",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-09-09",
+      "entry_spot": 567.5,
+      "entry_rsi2": 4.637391725853647,
+      "expiry": "2026-10-16",
+      "strike": 585.0,
+      "dte_at_entry": 37,
+      "contracts": 7,
+      "entry_ask": 9.0,
+      "entry_spread_pct": 5.714285714285714,
+      "entry_delta": 0.3690130651395279,
+      "cost": 6300.0,
+      "feat": {
+        "rsi2": 4.637391725853647,
+        "above_200": 6.92362043595911,
+        "below_5": -1.8658483416832072,
+        "vol20": 1.262318634619709,
+        "ret5": -2.3403848145449158,
+        "off_high": -5.394589761241885,
+        "breadth": 4.0,
+        "mkt_above_200": 6.901314464913222
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 567.5,
+      "last_mid": 8.75,
+      "last_bid": 8.5,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-09",
+          567.5,
+          8.75
+        ]
+      ]
+    },
+    {
+      "ticker": "XLV",
+      "sector": "hlth ETF",
+      "tier": "retrospective",
+      "opened": "2026-09-09",
+      "entry_spot": 166.5800018310547,
+      "entry_rsi2": 4.657101257061896,
+      "expiry": "2026-10-16",
+      "strike": 164.0,
+      "dte_at_entry": 37,
+      "contracts": 11,
+      "entry_ask": 5.4,
+      "entry_spread_pct": 14.925373134328357,
+      "entry_delta": 0.6438344349424068,
+      "cost": 5940.0,
+      "feat": {
+        "rsi2": 4.657101257061896,
+        "above_200": 7.112418777462226,
+        "below_5": -2.1694429058862763,
+        "vol20": 1.2903925564512542,
+        "ret5": -2.964988869447893,
+        "off_high": -5.1798675000634065,
+        "breadth": 4.0,
+        "mkt_above_200": 6.901314464913222
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 166.5800018310547,
+      "last_mid": 5.025,
+      "last_bid": 4.65,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-09",
+          166.5800018310547,
+          5.025
         ]
       ]
     }
@@ -1206,6 +1387,13 @@
       "equity": 53840.0,
       "cash": 52120.0,
       "open": 1,
+      "realised": 5220.0
+    },
+    {
+      "date": "2026-09-09",
+      "equity": 52322.5,
+      "cash": 28040.0,
+      "open": 5,
       "realised": 5220.0
     }
   ],
