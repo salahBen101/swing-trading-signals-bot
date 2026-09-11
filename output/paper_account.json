@@ -1017,10 +1017,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 1062.4000244140625,
-      "last_mid": 9.0,
-      "last_bid": 8.1,
-      "days_held": 6,
+      "last_spot": 1079.6500244140625,
+      "last_mid": 9.2,
+      "last_bid": 6.6,
+      "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1061,6 +1061,11 @@
           "2026-09-10",
           1062.4000244140625,
           9.0
+        ],
+        [
+          "2026-09-11",
+          1079.6500244140625,
+          9.2
         ]
       ]
     },
@@ -1145,10 +1150,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 167.64999389648438,
-      "last_mid": 11.7,
-      "last_bid": 10.65,
-      "days_held": 1,
+      "last_spot": 170.19000244140625,
+      "last_mid": 13.25,
+      "last_bid": 12.5,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1164,6 +1169,11 @@
           "2026-09-10",
           167.64999389648438,
           11.7
+        ],
+        [
+          "2026-09-11",
+          170.19000244140625,
+          13.25
         ]
       ]
     },
@@ -1194,10 +1204,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 156.82000732421875,
-      "last_mid": 4.5,
-      "last_bid": 4.15,
-      "days_held": 1,
+      "last_spot": 156.1999969482422,
+      "last_mid": 3.9499999999999997,
+      "last_bid": 3.8,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1213,6 +1223,11 @@
           "2026-09-10",
           156.82000732421875,
           4.5
+        ],
+        [
+          "2026-09-11",
+          156.1999969482422,
+          3.9499999999999997
         ]
       ]
     },
@@ -1243,10 +1258,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 565.3699951171875,
-      "last_mid": 7.5,
-      "last_bid": 7.1,
-      "days_held": 1,
+      "last_spot": 569.1900024414062,
+      "last_mid": 8.35,
+      "last_bid": 7.3,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1262,6 +1277,11 @@
           "2026-09-10",
           565.3699951171875,
           7.5
+        ],
+        [
+          "2026-09-11",
+          569.1900024414062,
+          8.35
         ]
       ]
     },
@@ -1292,10 +1312,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 165.66000366210938,
-      "last_mid": 4.73,
-      "last_bid": 2.46,
-      "days_held": 1,
+      "last_spot": 165.36000061035156,
+      "last_mid": 4.725,
+      "last_bid": 2.4,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1311,6 +1331,11 @@
           "2026-09-10",
           165.66000366210938,
           4.73
+        ],
+        [
+          "2026-09-11",
+          165.36000061035156,
+          4.725
         ]
       ]
     }
@@ -1424,6 +1449,13 @@
     {
       "date": "2026-09-10",
       "equity": 48573.0,
+      "cash": 28040.0,
+      "open": 5,
+      "realised": 5220.0
+    },
+    {
+      "date": "2026-09-11",
+      "equity": 49252.5,
       "cash": 28040.0,
       "open": 5,
       "realised": 5220.0
