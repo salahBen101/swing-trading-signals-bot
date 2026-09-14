@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 28040.0,
+  "cash": 29155.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -1017,10 +1017,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 1079.6500244140625,
-      "last_mid": 9.2,
-      "last_bid": 6.6,
-      "days_held": 7,
+      "last_spot": 1065.5999755859375,
+      "last_mid": 8.1,
+      "last_bid": 7.2,
+      "days_held": 8,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1066,6 +1066,11 @@
           "2026-09-11",
           1079.6500244140625,
           9.2
+        ],
+        [
+          "2026-09-14",
+          1065.5999755859375,
+          8.1
         ]
       ]
     },
@@ -1149,15 +1154,15 @@
         "mkt_above_200": 6.901314464913222
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 170.19000244140625,
-      "last_mid": 13.25,
-      "last_bid": 12.5,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 170.64999389648438,
+      "last_mid": 13.575,
+      "last_bid": 12.35,
+      "days_held": 3,
+      "exit_date": "2026-09-14",
+      "exit_bid": 12.35,
+      "exit_reason": "close > 5-day SMA",
+      "proceeds": 4940.0,
       "stale": false,
       "marks": [
         [
@@ -1174,6 +1179,11 @@
           "2026-09-11",
           170.19000244140625,
           13.25
+        ],
+        [
+          "2026-09-14",
+          170.64999389648438,
+          13.575
         ]
       ]
     },
@@ -1204,10 +1214,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 156.1999969482422,
-      "last_mid": 3.9499999999999997,
-      "last_bid": 3.8,
-      "days_held": 2,
+      "last_spot": 157.60000610351562,
+      "last_mid": 4.65,
+      "last_bid": 4.2,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1228,6 +1238,11 @@
           "2026-09-11",
           156.1999969482422,
           3.9499999999999997
+        ],
+        [
+          "2026-09-14",
+          157.60000610351562,
+          4.65
         ]
       ]
     },
@@ -1257,15 +1272,15 @@
         "mkt_above_200": 6.901314464913222
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 569.1900024414062,
-      "last_mid": 8.35,
-      "last_bid": 7.3,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 574.4199829101562,
+      "last_mid": 9.8,
+      "last_bid": 8.8,
+      "days_held": 3,
+      "exit_date": "2026-09-14",
+      "exit_bid": 8.8,
+      "exit_reason": "RSI(2) 80.3 > 65",
+      "proceeds": 6160.000000000001,
       "stale": false,
       "marks": [
         [
@@ -1282,6 +1297,11 @@
           "2026-09-11",
           569.1900024414062,
           8.35
+        ],
+        [
+          "2026-09-14",
+          574.4199829101562,
+          9.8
         ]
       ]
     },
@@ -1311,15 +1331,15 @@
         "mkt_above_200": 6.901314464913222
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 165.36000061035156,
-      "last_mid": 4.725,
-      "last_bid": 2.4,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 167.75,
+      "last_mid": 5.575,
+      "last_bid": 4.65,
+      "days_held": 3,
+      "exit_date": "2026-09-14",
+      "exit_bid": 4.65,
+      "exit_reason": "RSI(2) 75.6 > 65",
+      "proceeds": 5115.000000000001,
       "stale": false,
       "marks": [
         [
@@ -1336,6 +1356,143 @@
           "2026-09-11",
           165.36000061035156,
           4.725
+        ],
+        [
+          "2026-09-14",
+          167.75,
+          5.575
+        ]
+      ]
+    },
+    {
+      "ticker": "NVDA",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-09-14",
+      "entry_spot": 210.9600067138672,
+      "entry_rsi2": 2.0416603147107253,
+      "expiry": "2026-10-23",
+      "strike": 200.0,
+      "dte_at_entry": 39,
+      "contracts": 3,
+      "entry_ask": 16.8,
+      "entry_spread_pct": 3.021148036253776,
+      "entry_delta": 0.7005556678305418,
+      "cost": 5040.0,
+      "feat": {
+        "rsi2": 2.0416603147107253,
+        "above_200": 6.753168297766354,
+        "below_5": -3.84772801969554,
+        "vol20": 2.897047697084211,
+        "ret5": -8.421598300522238,
+        "off_high": -10.511579792092373,
+        "breadth": 3.0,
+        "mkt_above_200": 6.462242485486414
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 210.9600067138672,
+      "last_mid": 16.55,
+      "last_bid": 16.3,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-14",
+          210.9600067138672,
+          16.55
+        ]
+      ]
+    },
+    {
+      "ticker": "BAC",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-09-14",
+      "entry_spot": 59.470001220703125,
+      "entry_rsi2": 3.3324438962926592,
+      "expiry": "2026-10-16",
+      "strike": 57.5,
+      "dte_at_entry": 32,
+      "contracts": 18,
+      "entry_ask": 3.25,
+      "entry_spread_pct": 4.724409448818895,
+      "entry_delta": 0.6790126177093351,
+      "cost": 5850.0,
+      "feat": {
+        "rsi2": 3.3324438962926592,
+        "above_200": 7.870053941821742,
+        "below_5": -4.012522669236951,
+        "vol20": 1.4837279433346768,
+        "ret5": -5.121249312131216,
+        "off_high": -8.23946387756428,
+        "breadth": 3.0,
+        "mkt_above_200": 6.462242485486414
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 59.470001220703125,
+      "last_mid": 3.175,
+      "last_bid": 3.1,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-14",
+          59.470001220703125,
+          3.175
+        ]
+      ]
+    },
+    {
+      "ticker": "LRCX",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-09-14",
+      "entry_spot": 273.489990234375,
+      "entry_rsi2": 4.612872846282997,
+      "expiry": "2026-10-16",
+      "strike": 270.0,
+      "dte_at_entry": 32,
+      "contracts": 2,
+      "entry_ask": 21.05,
+      "entry_spread_pct": 5.616605616605627,
+      "entry_delta": 0.5729014227333104,
+      "cost": 4210.0,
+      "feat": {
+        "rsi2": 4.612872846282997,
+        "above_200": 3.2809970809359434,
+        "below_5": -9.198665241494409,
+        "vol20": 3.677804064943642,
+        "ret5": -11.10352814555987,
+        "off_high": -36.88643788588455,
+        "breadth": 3.0,
+        "mkt_above_200": 6.462242485486414
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 273.489990234375,
+      "last_mid": 20.475,
+      "last_bid": 19.9,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-14",
+          273.489990234375,
+          20.475
         ]
       ]
     }
@@ -1459,6 +1616,13 @@
       "cash": 28040.0,
       "open": 5,
       "realised": 5220.0
+    },
+    {
+      "date": "2026-09-14",
+      "equity": 49390.0,
+      "cash": 29155.0,
+      "open": 5,
+      "realised": 3455.0
     }
   ],
   "missed": [
