@@ -1017,10 +1017,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 1065.5999755859375,
-      "last_mid": 8.1,
-      "last_bid": 7.2,
-      "days_held": 8,
+      "last_spot": 1058.6600341796875,
+      "last_mid": 6.8999999999999995,
+      "last_bid": 5.6,
+      "days_held": 9,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1071,6 +1071,11 @@
           "2026-09-14",
           1065.5999755859375,
           8.1
+        ],
+        [
+          "2026-09-15",
+          1058.6600341796875,
+          6.8999999999999995
         ]
       ]
     },
@@ -1214,10 +1219,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 157.60000610351562,
-      "last_mid": 4.65,
-      "last_bid": 4.2,
-      "days_held": 3,
+      "last_spot": 154.02999877929688,
+      "last_mid": 3.035,
+      "last_bid": 2.82,
+      "days_held": 4,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1243,6 +1248,11 @@
           "2026-09-14",
           157.60000610351562,
           4.65
+        ],
+        [
+          "2026-09-15",
+          154.02999877929688,
+          3.035
         ]
       ]
     },
@@ -1391,10 +1401,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 210.9600067138672,
-      "last_mid": 16.55,
-      "last_bid": 16.3,
-      "days_held": 0,
+      "last_spot": 212.1699981689453,
+      "last_mid": 17.299999999999997,
+      "last_bid": 17.2,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1405,6 +1415,11 @@
           "2026-09-14",
           210.9600067138672,
           16.55
+        ],
+        [
+          "2026-09-15",
+          212.1699981689453,
+          17.299999999999997
         ]
       ]
     },
@@ -1435,10 +1450,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 59.470001220703125,
-      "last_mid": 3.175,
-      "last_bid": 3.1,
-      "days_held": 0,
+      "last_spot": 59.52000045776367,
+      "last_mid": 3.2249999999999996,
+      "last_bid": 3.15,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1449,6 +1464,11 @@
           "2026-09-14",
           59.470001220703125,
           3.175
+        ],
+        [
+          "2026-09-15",
+          59.52000045776367,
+          3.2249999999999996
         ]
       ]
     },
@@ -1479,10 +1499,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 273.489990234375,
-      "last_mid": 20.475,
-      "last_bid": 19.9,
-      "days_held": 0,
+      "last_spot": 270.8699951171875,
+      "last_mid": 18.525,
+      "last_bid": 17.75,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1493,6 +1513,11 @@
           "2026-09-14",
           273.489990234375,
           20.475
+        ],
+        [
+          "2026-09-15",
+          270.8699951171875,
+          18.525
         ]
       ]
     }
@@ -1623,6 +1648,13 @@
       "cash": 29155.0,
       "open": 5,
       "realised": 3455.0
+    },
+    {
+      "date": "2026-09-15",
+      "equity": 47580.0,
+      "cash": 29155.0,
+      "open": 5,
+      "realised": 3455.0
     }
   ],
   "missed": [
@@ -1663,5 +1695,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 9/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 12/40 closed trades. It will not score anything until it has a real sample."
 }
