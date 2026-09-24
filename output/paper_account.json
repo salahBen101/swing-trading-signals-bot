@@ -1475,10 +1475,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 56.0,
-      "last_mid": 1.0550000000000002,
-      "last_bid": 0.99,
-      "days_held": 7,
+      "last_spot": 56.029998779296875,
+      "last_mid": 1.08,
+      "last_bid": 1.05,
+      "days_held": 8,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1519,6 +1519,11 @@
           "2026-09-23",
           56.0,
           1.0550000000000002
+        ],
+        [
+          "2026-09-24",
+          56.029998779296875,
+          1.08
         ]
       ]
     },
@@ -1613,10 +1618,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 131.92999267578125,
-      "last_mid": 5.775,
-      "last_bid": 5.6,
-      "days_held": 5,
+      "last_spot": 132.10000610351562,
+      "last_mid": 5.875,
+      "last_bid": 5.65,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1647,6 +1652,11 @@
           "2026-09-23",
           131.92999267578125,
           5.775
+        ],
+        [
+          "2026-09-24",
+          132.10000610351562,
+          5.875
         ]
       ]
     },
@@ -1677,10 +1687,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 198.38999938964844,
-      "last_mid": 12.649999999999999,
-      "last_bid": 12.1,
-      "days_held": 5,
+      "last_spot": 196.32000732421875,
+      "last_mid": 11.05,
+      "last_bid": 9.75,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1711,6 +1721,11 @@
           "2026-09-23",
           198.38999938964844,
           12.649999999999999
+        ],
+        [
+          "2026-09-24",
+          196.32000732421875,
+          11.05
         ]
       ]
     },
@@ -1795,10 +1810,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 54.540000915527344,
-      "last_mid": 0.845,
-      "last_bid": 0.69,
-      "days_held": 5,
+      "last_spot": 54.529998779296875,
+      "last_mid": 0.72,
+      "last_bid": 0.6,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1829,6 +1844,11 @@
           "2026-09-23",
           54.540000915527344,
           0.845
+        ],
+        [
+          "2026-09-24",
+          54.529998779296875,
+          0.72
         ]
       ]
     },
@@ -1918,10 +1938,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 237.5800018310547,
-      "last_mid": 8.600000000000001,
-      "last_bid": 8.4,
-      "days_held": 1,
+      "last_spot": 238.22000122070312,
+      "last_mid": 8.575,
+      "last_bid": 8.3,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1937,6 +1957,11 @@
           "2026-09-23",
           237.5800018310547,
           8.600000000000001
+        ],
+        [
+          "2026-09-24",
+          238.22000122070312,
+          8.575
         ]
       ]
     },
@@ -1967,10 +1992,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 149.5800018310547,
-      "last_mid": 11.875,
-      "last_bid": 11.15,
-      "days_held": 0,
+      "last_spot": 151.38999938964844,
+      "last_mid": 13.2,
+      "last_bid": 11.65,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1981,6 +2006,11 @@
           "2026-09-23",
           149.5800018310547,
           11.875
+        ],
+        [
+          "2026-09-24",
+          151.38999938964844,
+          13.2
         ]
       ]
     }
@@ -2153,6 +2183,13 @@
       "cash": 22274.0,
       "open": 6,
       "realised": 3975.0
+    },
+    {
+      "date": "2026-09-24",
+      "equity": 45873.5,
+      "cash": 22274.0,
+      "open": 6,
+      "realised": 3975.0
     }
   ],
   "missed": [
@@ -2203,6 +2240,11 @@
     },
     {
       "date": "2026-09-23",
+      "ticker": "CB",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-24",
       "ticker": "CB",
       "why": "no contract in budget"
     }
