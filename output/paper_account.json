@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 22274.0,
+  "cash": 29364.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -1474,15 +1474,15 @@
         "mkt_above_200": 6.462242485486414
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 56.029998779296875,
-      "last_mid": 1.08,
-      "last_bid": 1.05,
-      "days_held": 8,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 56.70000076293945,
+      "last_mid": 1.27,
+      "last_bid": 1.25,
+      "days_held": 9,
+      "exit_date": "2026-09-25",
+      "exit_bid": 1.25,
+      "exit_reason": "RSI(2) 69.9 > 65",
+      "proceeds": 2250.0,
       "stale": false,
       "marks": [
         [
@@ -1524,6 +1524,11 @@
           "2026-09-24",
           56.029998779296875,
           1.08
+        ],
+        [
+          "2026-09-25",
+          56.70000076293945,
+          1.27
         ]
       ]
     },
@@ -1619,9 +1624,9 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 132.10000610351562,
-      "last_mid": 5.875,
-      "last_bid": 5.65,
-      "days_held": 6,
+      "last_mid": 7.1,
+      "last_bid": 6.65,
+      "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1657,6 +1662,11 @@
           "2026-09-24",
           132.10000610351562,
           5.875
+        ],
+        [
+          "2026-09-25",
+          132.10000610351562,
+          7.1
         ]
       ]
     },
@@ -1688,9 +1698,9 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 196.32000732421875,
-      "last_mid": 11.05,
-      "last_bid": 9.75,
-      "days_held": 6,
+      "last_mid": 10.774999999999999,
+      "last_bid": 9.95,
+      "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1726,6 +1736,11 @@
           "2026-09-24",
           196.32000732421875,
           11.05
+        ],
+        [
+          "2026-09-25",
+          196.32000732421875,
+          10.774999999999999
         ]
       ]
     },
@@ -1813,7 +1828,7 @@
       "last_spot": 54.529998779296875,
       "last_mid": 0.72,
       "last_bid": 0.6,
-      "days_held": 6,
+      "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1847,6 +1862,11 @@
         ],
         [
           "2026-09-24",
+          54.529998779296875,
+          0.72
+        ],
+        [
+          "2026-09-25",
           54.529998779296875,
           0.72
         ]
@@ -1937,15 +1957,15 @@
         "mkt_above_200": 7.834917554363963
       },
       "ml_score": null,
-      "status": "OPEN",
+      "status": "CLOSED",
       "last_spot": 238.22000122070312,
-      "last_mid": 8.575,
-      "last_bid": 8.3,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "last_mid": 6.175,
+      "last_bid": 6.05,
+      "days_held": 3,
+      "exit_date": "2026-09-25",
+      "exit_bid": 6.05,
+      "exit_reason": "close > 5-day SMA",
+      "proceeds": 4840.0,
       "stale": false,
       "marks": [
         [
@@ -1962,6 +1982,11 @@
           "2026-09-24",
           238.22000122070312,
           8.575
+        ],
+        [
+          "2026-09-25",
+          238.22000122070312,
+          6.175
         ]
       ]
     },
@@ -1993,9 +2018,9 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 151.38999938964844,
-      "last_mid": 13.2,
-      "last_bid": 11.65,
-      "days_held": 1,
+      "last_mid": 18.375,
+      "last_bid": 16.95,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2011,6 +2036,11 @@
           "2026-09-24",
           151.38999938964844,
           13.2
+        ],
+        [
+          "2026-09-25",
+          151.38999938964844,
+          18.375
         ]
       ]
     }
@@ -2190,6 +2220,13 @@
       "cash": 22274.0,
       "open": 6,
       "realised": 3975.0
+    },
+    {
+      "date": "2026-09-25",
+      "equity": 47004.5,
+      "cash": 29364.0,
+      "open": 4,
+      "realised": -265.0
     }
   ],
   "missed": [
@@ -2245,6 +2282,11 @@
     },
     {
       "date": "2026-09-24",
+      "ticker": "CB",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-25",
       "ticker": "CB",
       "why": "no contract in budget"
     }
