@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 29364.0,
+  "cash": 38919.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -1622,15 +1622,15 @@
         "mkt_above_200": 5.391020540932656
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 132.10000610351562,
-      "last_mid": 7.1,
-      "last_bid": 6.65,
+      "status": "CLOSED",
+      "last_spot": 134.27999877929688,
+      "last_mid": 5.1,
+      "last_bid": 4.65,
       "days_held": 7,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "exit_date": "2026-09-25",
+      "exit_bid": 4.65,
+      "exit_reason": "RSI(2) 82.6 > 65",
+      "proceeds": 3255.0000000000005,
       "stale": false,
       "marks": [
         [
@@ -1697,9 +1697,9 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 196.32000732421875,
-      "last_mid": 10.774999999999999,
-      "last_bid": 9.95,
+      "last_spot": 196.30999755859375,
+      "last_mid": 8.9,
+      "last_bid": 8.15,
       "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
@@ -1825,9 +1825,9 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 54.529998779296875,
-      "last_mid": 0.72,
-      "last_bid": 0.6,
+      "last_spot": 54.84000015258789,
+      "last_mid": 0.55,
+      "last_bid": 0.32,
       "days_held": 7,
       "exit_date": null,
       "exit_bid": null,
@@ -2016,15 +2016,15 @@
         "mkt_above_200": 6.996046768015041
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 151.38999938964844,
-      "last_mid": 18.375,
-      "last_bid": 16.95,
+      "status": "CLOSED",
+      "last_spot": 157.47000122070312,
+      "last_mid": 17.0,
+      "last_bid": 15.75,
       "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "exit_date": "2026-09-25",
+      "exit_bid": 15.75,
+      "exit_reason": "RSI(2) 65.4 > 65",
+      "proceeds": 6300.0,
       "stale": false,
       "marks": [
         [
@@ -2223,10 +2223,10 @@
     },
     {
       "date": "2026-09-25",
-      "equity": 47004.5,
-      "cash": 29364.0,
-      "open": 4,
-      "realised": -265.0
+      "equity": 43184.0,
+      "cash": 38919.0,
+      "open": 2,
+      "realised": -720.0
     }
   ],
   "missed": [
@@ -2289,8 +2289,13 @@
       "date": "2026-09-25",
       "ticker": "CB",
       "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-25",
+      "ticker": "CB",
+      "why": "no contract in budget"
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 18/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 20/40 closed trades. It will not score anything until it has a real sample."
 }
