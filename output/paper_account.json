@@ -1697,10 +1697,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 196.30999755859375,
-      "last_mid": 8.9,
-      "last_bid": 8.15,
-      "days_held": 7,
+      "last_spot": 193.63999938964844,
+      "last_mid": 7.8,
+      "last_bid": 7.5,
+      "days_held": 8,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1741,6 +1741,11 @@
           "2026-09-25",
           196.32000732421875,
           10.774999999999999
+        ],
+        [
+          "2026-09-28",
+          193.63999938964844,
+          7.8
         ]
       ]
     },
@@ -1825,10 +1830,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 54.84000015258789,
-      "last_mid": 0.55,
-      "last_bid": 0.32,
-      "days_held": 7,
+      "last_spot": 54.189998626708984,
+      "last_mid": 0.41500000000000004,
+      "last_bid": 0.38,
+      "days_held": 8,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1869,6 +1874,11 @@
           "2026-09-25",
           54.529998779296875,
           0.72
+        ],
+        [
+          "2026-09-28",
+          54.189998626708984,
+          0.41500000000000004
         ]
       ]
     },
@@ -2227,6 +2237,13 @@
       "cash": 38919.0,
       "open": 2,
       "realised": -720.0
+    },
+    {
+      "date": "2026-09-28",
+      "equity": 42462.5,
+      "cash": 38919.0,
+      "open": 2,
+      "realised": -720.0
     }
   ],
   "missed": [
@@ -2294,8 +2311,13 @@
       "date": "2026-09-25",
       "ticker": "CB",
       "why": "no contract in budget"
+    },
+    {
+      "date": "2026-09-28",
+      "ticker": "CB",
+      "why": "no contract in budget"
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 20/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 22/40 closed trades. It will not score anything until it has a real sample."
 }
