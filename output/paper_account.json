@@ -1697,10 +1697,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 193.63999938964844,
-      "last_mid": 7.8,
-      "last_bid": 7.5,
-      "days_held": 8,
+      "last_spot": 192.75999450683594,
+      "last_mid": 4.9,
+      "last_bid": 4.65,
+      "days_held": 9,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1746,6 +1746,11 @@
           "2026-09-28",
           193.63999938964844,
           7.8
+        ],
+        [
+          "2026-09-29",
+          192.75999450683594,
+          4.9
         ]
       ]
     },
@@ -1830,10 +1835,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 54.189998626708984,
-      "last_mid": 0.41500000000000004,
-      "last_bid": 0.38,
-      "days_held": 8,
+      "last_spot": 54.0099983215332,
+      "last_mid": 0.315,
+      "last_bid": 0.17,
+      "days_held": 9,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -1879,6 +1884,11 @@
           "2026-09-28",
           54.189998626708984,
           0.41500000000000004
+        ],
+        [
+          "2026-09-29",
+          54.0099983215332,
+          0.315
         ]
       ]
     },
@@ -2241,6 +2251,13 @@
     {
       "date": "2026-09-28",
       "equity": 42462.5,
+      "cash": 38919.0,
+      "open": 2,
+      "realised": -720.0
+    },
+    {
+      "date": "2026-09-29",
+      "equity": 41302.5,
       "cash": 38919.0,
       "open": 2,
       "realised": -720.0
