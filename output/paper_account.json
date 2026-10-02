@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 38919.0,
+  "cash": 31891.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -1696,15 +1696,15 @@
         "mkt_above_200": 5.391020540932656
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 192.75999450683594,
-      "last_mid": 4.9,
-      "last_bid": 4.65,
-      "days_held": 9,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 188.0800018310547,
+      "last_mid": 4.824999999999999,
+      "last_bid": 4.6,
+      "days_held": 10,
+      "exit_date": "2026-09-30",
+      "exit_bid": 4.6,
+      "exit_reason": "10-session stop",
+      "proceeds": 1379.9999999999998,
       "stale": false,
       "marks": [
         [
@@ -1751,6 +1751,11 @@
           "2026-09-29",
           192.75999450683594,
           4.9
+        ],
+        [
+          "2026-09-30",
+          188.0800018310547,
+          4.824999999999999
         ]
       ]
     },
@@ -1834,15 +1839,15 @@
         "mkt_above_200": 5.391020540932656
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 54.0099983215332,
-      "last_mid": 0.315,
-      "last_bid": 0.17,
-      "days_held": 9,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 53.400001525878906,
+      "last_mid": 0.27,
+      "last_bid": 0.22,
+      "days_held": 10,
+      "exit_date": "2026-09-30",
+      "exit_bid": 0.22,
+      "exit_reason": "10-session stop",
+      "proceeds": 638.0,
       "stale": false,
       "marks": [
         [
@@ -1889,6 +1894,11 @@
           "2026-09-29",
           54.0099983215332,
           0.315
+        ],
+        [
+          "2026-09-30",
+          53.400001525878906,
+          0.27
         ]
       ]
     },
@@ -2061,6 +2071,94 @@
           "2026-09-25",
           151.38999938964844,
           18.375
+        ]
+      ]
+    },
+    {
+      "ticker": "BRK-B",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-09-30",
+      "entry_spot": 497.95001220703125,
+      "entry_rsi2": 3.1841751333264767,
+      "expiry": "2026-10-30",
+      "strike": 535.0,
+      "dte_at_entry": 29,
+      "contracts": 106,
+      "entry_ask": 0.46,
+      "entry_spread_pct": 13.95348837209302,
+      "entry_delta": 0.04985524684632325,
+      "cost": 4876.0,
+      "feat": {
+        "rsi2": 3.1841751333264767,
+        "above_200": 1.0491727877069756,
+        "below_5": -0.9665661819934779,
+        "vol20": 0.7550344030763856,
+        "ret5": -1.8179310638634316,
+        "off_high": -5.944235525477993,
+        "breadth": 2.0,
+        "mkt_above_200": 5.977458403005986
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 497.95001220703125,
+      "last_mid": 0.43000000000000005,
+      "last_bid": 0.4,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-30",
+          497.95001220703125,
+          0.43000000000000005
+        ]
+      ]
+    },
+    {
+      "ticker": "IWM",
+      "sector": "broad mkt",
+      "tier": "retrospective",
+      "opened": "2026-09-30",
+      "entry_spot": 277.8900146484375,
+      "entry_rsi2": 3.3130839052992798,
+      "expiry": "2026-10-30",
+      "strike": 269.0,
+      "dte_at_entry": 29,
+      "contracts": 3,
+      "entry_ask": 13.9,
+      "entry_spread_pct": 1.0849909584086825,
+      "entry_delta": 0.7038344687450249,
+      "cost": 4170.0,
+      "feat": {
+        "rsi2": 3.3130839052992798,
+        "above_200": 0.6679366349349403,
+        "below_5": -0.7925418530749018,
+        "vol20": 0.7413689034124921,
+        "ret5": -1.4294830403482117,
+        "off_high": -8.91539611784873,
+        "breadth": 2.0,
+        "mkt_above_200": 5.977458403005986
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 277.8900146484375,
+      "last_mid": 13.825,
+      "last_bid": 13.75,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-09-30",
+          277.8900146484375,
+          13.825
         ]
       ]
     }
@@ -2261,6 +2359,13 @@
       "cash": 38919.0,
       "open": 2,
       "realised": -720.0
+    },
+    {
+      "date": "2026-09-30",
+      "equity": 40596.5,
+      "cash": 31891.0,
+      "open": 2,
+      "realised": -9063.0
     }
   ],
   "missed": [
