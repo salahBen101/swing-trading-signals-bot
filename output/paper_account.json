@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 35149.0,
+  "cash": 38719.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2208,15 +2208,15 @@
         "mkt_above_200": 6.105823011745692
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 128.5500030517578,
-      "last_mid": 3.0,
-      "last_bid": 2.65,
-      "days_held": 2,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 128.52000427246094,
+      "last_mid": 2.59,
+      "last_bid": 2.38,
+      "days_held": 3,
+      "exit_date": "2026-10-06",
+      "exit_bid": 2.38,
+      "exit_reason": "close > 5-day SMA",
+      "proceeds": 3570.0,
       "stale": false,
       "marks": [
         [
@@ -2228,6 +2228,11 @@
           "2026-10-05",
           128.5500030517578,
           3.0
+        ],
+        [
+          "2026-10-06",
+          128.52000427246094,
+          2.59
         ]
       ]
     }
@@ -2449,6 +2454,13 @@
       "cash": 35149.0,
       "open": 1,
       "realised": -10051.0
+    },
+    {
+      "date": "2026-10-06",
+      "equity": 38719.0,
+      "cash": 38719.0,
+      "open": 0,
+      "realised": -11281.0
     }
   ],
   "missed": [
@@ -2534,5 +2546,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 24/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 26/40 closed trades. It will not score anything until it has a real sample."
 }
