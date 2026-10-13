@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 38719.0,
+  "cash": 19364.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2235,6 +2235,226 @@
           2.59
         ]
       ]
+    },
+    {
+      "ticker": "LRCX",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-10-12",
+      "entry_spot": 309.55999755859375,
+      "entry_rsi2": 1.771997955301316,
+      "expiry": "2026-11-20",
+      "strike": 290.0,
+      "dte_at_entry": 39,
+      "contracts": 1,
+      "entry_ask": 35.75,
+      "entry_spread_pct": 6.4981949458483745,
+      "entry_delta": 0.6749737189427235,
+      "cost": 3575.0,
+      "feat": {
+        "rsi2": 1.771997955301316,
+        "above_200": 10.624623314096105,
+        "below_5": -4.005856292129895,
+        "vol20": 2.7167841483145017,
+        "ret5": -10.480043815406948,
+        "off_high": -28.562525753807023,
+        "breadth": 5.0,
+        "mkt_above_200": 7.564619464823985
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 309.55999755859375,
+      "last_mid": 34.625,
+      "last_bid": 33.5,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-12",
+          309.55999755859375,
+          34.625
+        ]
+      ]
+    },
+    {
+      "ticker": "SMH",
+      "sector": "tech ETF",
+      "tier": "retrospective",
+      "opened": "2026-10-12",
+      "entry_spot": 590.989990234375,
+      "entry_rsi2": 1.9732122581760052,
+      "expiry": "2026-11-20",
+      "strike": 565.0,
+      "dte_at_entry": 39,
+      "contracts": 1,
+      "entry_ask": 44.1,
+      "entry_spread_pct": 8.63394441159077,
+      "entry_delta": 0.6755159346681039,
+      "cost": 4410.0,
+      "feat": {
+        "rsi2": 1.9732122581760052,
+        "above_200": 16.47974689000251,
+        "below_5": -3.4052310163822153,
+        "vol20": 1.6869075994094211,
+        "ret5": -6.7692116307064065,
+        "off_high": -11.648799694801394,
+        "breadth": 5.0,
+        "mkt_above_200": 7.564619464823985
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 590.989990234375,
+      "last_mid": 42.275000000000006,
+      "last_bid": 40.45,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-12",
+          590.989990234375,
+          42.275000000000006
+        ]
+      ]
+    },
+    {
+      "ticker": "QCOM",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-10-12",
+      "entry_spot": 174.42999267578125,
+      "entry_rsi2": 2.7166848992074506,
+      "expiry": "2026-11-20",
+      "strike": 165.0,
+      "dte_at_entry": 39,
+      "contracts": 2,
+      "entry_ask": 16.9,
+      "entry_spread_pct": 5.471124620060782,
+      "entry_delta": 0.6735950932300965,
+      "cost": 3379.9999999999995,
+      "feat": {
+        "rsi2": 2.7166848992074506,
+        "above_200": 3.000339162140553,
+        "below_5": -1.3505432654741245,
+        "vol20": 3.5252210783775215,
+        "ret5": -3.5178941570542133,
+        "off_high": -30.511517127355205,
+        "breadth": 5.0,
+        "mkt_above_200": 7.564619464823985
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 174.42999267578125,
+      "last_mid": 16.45,
+      "last_bid": 16.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-12",
+          174.42999267578125,
+          16.45
+        ]
+      ]
+    },
+    {
+      "ticker": "AMAT",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-10-12",
+      "entry_spot": 497.5299987792969,
+      "entry_rsi2": 2.7358732491129274,
+      "expiry": "2026-11-20",
+      "strike": 490.0,
+      "dte_at_entry": 39,
+      "contracts": 1,
+      "entry_ask": 43.7,
+      "entry_spread_pct": 8.841099163679814,
+      "entry_delta": 0.5794278213017677,
+      "cost": 4370.0,
+      "feat": {
+        "rsi2": 2.7358732491129274,
+        "above_200": 14.241981581858099,
+        "below_5": -3.0174871233799805,
+        "vol20": 2.5065375981645417,
+        "ret5": -8.252199620111666,
+        "off_high": -31.185339034675398,
+        "breadth": 5.0,
+        "mkt_above_200": 7.564619464823985
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 497.5299987792969,
+      "last_mid": 41.85,
+      "last_bid": 40.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-12",
+          497.5299987792969,
+          41.85
+        ]
+      ]
+    },
+    {
+      "ticker": "NVDA",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-10-12",
+      "entry_spot": 226.32000732421875,
+      "entry_rsi2": 4.363780312328231,
+      "expiry": "2026-11-20",
+      "strike": 215.0,
+      "dte_at_entry": 39,
+      "contracts": 2,
+      "entry_ask": 18.1,
+      "entry_spread_pct": 1.3908205841446453,
+      "entry_delta": 0.6887857312544134,
+      "cost": 3620.0000000000005,
+      "feat": {
+        "rsi2": 4.363780312328231,
+        "above_200": 11.851564070730136,
+        "below_5": -2.6823391751411907,
+        "vol20": 1.3947557444029888,
+        "ret5": -5.265796104505782,
+        "off_high": -5.400433820552841,
+        "breadth": 5.0,
+        "mkt_above_200": 7.564619464823985
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 226.32000732421875,
+      "last_mid": 17.975,
+      "last_bid": 17.85,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-12",
+          226.32000732421875,
+          17.975
+        ]
+      ]
     }
   ],
   "equity": [
@@ -2474,6 +2694,13 @@
       "equity": 38719.0,
       "cash": 38719.0,
       "open": 0,
+      "realised": -11281.0
+    },
+    {
+      "date": "2026-10-12",
+      "equity": 38124.0,
+      "cash": 19364.0,
+      "open": 5,
       "realised": -11281.0
     }
   ],
