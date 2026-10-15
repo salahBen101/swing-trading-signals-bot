@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 19204.0,
+  "cash": 12710.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2263,10 +2263,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 301.1099853515625,
-      "last_mid": 20.4,
-      "last_bid": 19.3,
-      "days_held": 1,
+      "last_spot": 277.4599914550781,
+      "last_mid": 15.350000000000001,
+      "last_bid": 14.8,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2282,6 +2282,11 @@
           "2026-10-13",
           301.1099853515625,
           20.4
+        ],
+        [
+          "2026-10-15",
+          277.4599914550781,
+          15.350000000000001
         ]
       ]
     },
@@ -2312,10 +2317,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 588.1199951171875,
-      "last_mid": 26.75,
-      "last_bid": 24.7,
-      "days_held": 1,
+      "last_spot": 558.8400268554688,
+      "last_mid": 23.775,
+      "last_bid": 22.55,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2331,6 +2336,11 @@
           "2026-10-13",
           588.1199951171875,
           26.75
+        ],
+        [
+          "2026-10-15",
+          558.8400268554688,
+          23.775
         ]
       ]
     },
@@ -2410,10 +2420,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 464.239990234375,
-      "last_mid": 16.475,
-      "last_bid": 13.85,
-      "days_held": 1,
+      "last_spot": 430.010009765625,
+      "last_mid": 10.725,
+      "last_bid": 9.85,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2429,6 +2439,11 @@
           "2026-10-13",
           464.239990234375,
           16.475
+        ],
+        [
+          "2026-10-15",
+          430.010009765625,
+          10.725
         ]
       ]
     },
@@ -2459,10 +2474,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 228.52000427246094,
-      "last_mid": 14.925,
-      "last_bid": 14.8,
-      "days_held": 1,
+      "last_spot": 217.22999572753906,
+      "last_mid": 12.350000000000001,
+      "last_bid": 12.3,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2478,6 +2493,11 @@
           "2026-10-13",
           228.52000427246094,
           14.925
+        ],
+        [
+          "2026-10-15",
+          217.22999572753906,
+          12.350000000000001
         ]
       ]
     },
@@ -2508,10 +2528,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 953.1900024414062,
-      "last_mid": 30.924999999999997,
-      "last_bid": 30.15,
-      "days_held": 0,
+      "last_spot": 931.239990234375,
+      "last_mid": 37.075,
+      "last_bid": 36.15,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2522,6 +2542,99 @@
           "2026-10-13",
           953.1900024414062,
           30.924999999999997
+        ],
+        [
+          "2026-10-15",
+          931.239990234375,
+          37.075
+        ]
+      ]
+    },
+    {
+      "ticker": "XLK",
+      "sector": "tech ETF",
+      "tier": "retrospective",
+      "opened": "2026-10-15",
+      "entry_spot": 189.19000244140625,
+      "entry_rsi2": 1.7454424711991834,
+      "expiry": "2026-11-20",
+      "strike": 185.0,
+      "dte_at_entry": 36,
+      "contracts": 3,
+      "entry_ask": 9.75,
+      "entry_spread_pct": 10.24258760107816,
+      "entry_delta": 0.6259647524376521,
+      "cost": 2925.0,
+      "feat": {
+        "rsi2": 1.7454424711991834,
+        "above_200": 13.07316309489963,
+        "below_5": -2.583825718052424,
+        "vol20": 1.215894820341396,
+        "ret5": -4.34320780205698,
+        "off_high": -6.341582949798886,
+        "breadth": 3.0,
+        "mkt_above_200": 6.507646310040238
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 189.19000244140625,
+      "last_mid": 9.275,
+      "last_bid": 8.8,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-15",
+          189.19000244140625,
+          9.275
+        ]
+      ]
+    },
+    {
+      "ticker": "QQQ",
+      "sector": "broad mkt",
+      "tier": "retrospective",
+      "opened": "2026-10-15",
+      "entry_spot": 728.0,
+      "entry_rsi2": 2.966677171214286,
+      "expiry": "2026-11-20",
+      "strike": 705.0,
+      "dte_at_entry": 36,
+      "contracts": 1,
+      "entry_ask": 35.69,
+      "entry_spread_pct": 0.44931199101375063,
+      "entry_delta": 0.6959114651405806,
+      "cost": 3569.0,
+      "feat": {
+        "rsi2": 2.966677171214286,
+        "above_200": 7.938618525856311,
+        "below_5": -1.5638906283571008,
+        "vol20": 1.012318332749827,
+        "ret5": -2.619119912549861,
+        "off_high": -4.1676505625902855,
+        "breadth": 3.0,
+        "mkt_above_200": 6.507646310040238
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 728.0,
+      "last_mid": 35.61,
+      "last_bid": 35.53,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-15",
+          728.0,
+          35.61
         ]
       ]
     }
@@ -2778,6 +2891,13 @@
       "cash": 19204.0,
       "open": 5,
       "realised": -11651.0
+    },
+    {
+      "date": "2026-10-15",
+      "equity": 30216.0,
+      "cash": 12710.0,
+      "open": 7,
+      "realised": -11651.0
     }
   ],
   "missed": [
@@ -2860,8 +2980,13 @@
       "date": "2026-10-01",
       "ticker": "MA",
       "why": "no contract in budget"
+    },
+    {
+      "date": "2026-10-15",
+      "ticker": "SNPS",
+      "why": "no contract in budget"
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 27/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 28/40 closed trades. It will not score anything until it has a real sample."
 }
