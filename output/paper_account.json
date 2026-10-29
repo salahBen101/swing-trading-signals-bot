@@ -2962,10 +2962,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 630.5599975585938,
-      "last_mid": 11.95,
-      "last_bid": 11.8,
-      "days_held": 1,
+      "last_spot": 620.1900024414062,
+      "last_mid": 8.975,
+      "last_bid": 8.6,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2981,6 +2981,11 @@
           "2026-10-26",
           630.5599975585938,
           11.95
+        ],
+        [
+          "2026-10-27",
+          620.1900024414062,
+          8.975
         ]
       ]
     }
@@ -3279,6 +3284,13 @@
       "cash": 19191.0,
       "open": 1,
       "realised": -28479.0
+    },
+    {
+      "date": "2026-10-27",
+      "equity": 20088.5,
+      "cash": 19191.0,
+      "open": 1,
+      "realised": -28479.0
     }
   ],
   "missed": [
@@ -3394,5 +3406,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 36/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 38/40 closed trades. It will not score anything until it has a real sample."
 }
