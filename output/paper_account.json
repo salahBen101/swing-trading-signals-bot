@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 19191.0,
+  "cash": 17351.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2962,10 +2962,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 620.1900024414062,
-      "last_mid": 8.975,
-      "last_bid": 8.6,
-      "days_held": 2,
+      "last_spot": 612.489990234375,
+      "last_mid": 11.9,
+      "last_bid": 11.5,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2986,6 +2986,55 @@
           "2026-10-27",
           620.1900024414062,
           8.975
+        ],
+        [
+          "2026-10-28",
+          612.489990234375,
+          11.9
+        ]
+      ]
+    },
+    {
+      "ticker": "ABNB",
+      "sector": "comms/other",
+      "tier": "retrospective",
+      "opened": "2026-10-28",
+      "entry_spot": 166.0449981689453,
+      "entry_rsi2": 3.751630223839129,
+      "expiry": "2026-11-20",
+      "strike": 165.0,
+      "dte_at_entry": 22,
+      "contracts": 2,
+      "entry_ask": 9.2,
+      "entry_spread_pct": 13.953488372093014,
+      "entry_delta": 0.5535021958206618,
+      "cost": 1839.9999999999998,
+      "feat": {
+        "rsi2": 3.751630223839129,
+        "above_200": 13.401518514010057,
+        "below_5": -2.7480870322143636,
+        "vol20": 1.6419523227292434,
+        "ret5": -4.4015223472864795,
+        "off_high": -12.837271302390906,
+        "breadth": 1.0,
+        "mkt_above_200": 6.064778912712976
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 166.0449981689453,
+      "last_mid": 8.6,
+      "last_bid": 8.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-10-28",
+          166.0449981689453,
+          8.6
         ]
       ]
     }
@@ -3290,6 +3339,13 @@
       "equity": 20088.5,
       "cash": 19191.0,
       "open": 1,
+      "realised": -28479.0
+    },
+    {
+      "date": "2026-10-28",
+      "equity": 20261.0,
+      "cash": 17351.0,
+      "open": 2,
       "realised": -28479.0
     }
   ],
