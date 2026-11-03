@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 17351.0,
+  "cash": 17181.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2962,10 +2962,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 624.52001953125,
-      "last_mid": 8.275,
-      "last_bid": 7.95,
-      "days_held": 4,
+      "last_spot": 606.72998046875,
+      "last_mid": 5.9,
+      "last_bid": 5.75,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -2996,6 +2996,11 @@
           "2026-10-29",
           624.52001953125,
           8.275
+        ],
+        [
+          "2026-11-02",
+          606.72998046875,
+          5.9
         ]
       ]
     },
@@ -3025,15 +3030,15 @@
         "mkt_above_200": 6.064778912712976
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 166.4499969482422,
-      "last_mid": 7.7250000000000005,
-      "last_bid": 6.4,
-      "days_held": 1,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 171.11000061035156,
+      "last_mid": 11.850000000000001,
+      "last_bid": 11.15,
+      "days_held": 3,
+      "exit_date": "2026-11-02",
+      "exit_bid": 11.15,
+      "exit_reason": "RSI(2) 80.9 > 65",
+      "proceeds": 2230.0,
       "stale": false,
       "marks": [
         [
@@ -3045,6 +3050,55 @@
           "2026-10-29",
           166.4499969482422,
           7.7250000000000005
+        ],
+        [
+          "2026-11-02",
+          171.11000061035156,
+          11.850000000000001
+        ]
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-02",
+      "entry_spot": 507.1199951171875,
+      "entry_rsi2": 1.6119612665148964,
+      "expiry": "2026-11-27",
+      "strike": 495.0,
+      "dte_at_entry": 25,
+      "contracts": 1,
+      "entry_ask": 24.0,
+      "entry_spread_pct": 9.378407851690287,
+      "entry_delta": 0.6401423271700974,
+      "cost": 2400.0,
+      "feat": {
+        "rsi2": 1.6119612665148964,
+        "above_200": 15.733563107197778,
+        "below_5": -3.277120203991446,
+        "vol20": 1.3821993465251414,
+        "ret5": -4.784074659545057,
+        "off_high": -6.685070618050437,
+        "breadth": 4.0,
+        "mkt_above_200": 3.1470163299039955
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 507.1199951171875,
+      "last_mid": 22.925,
+      "last_bid": 21.85,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-02",
+          507.1199951171875,
+          22.925
         ]
       ]
     }
@@ -3364,6 +3418,13 @@
       "cash": 17351.0,
       "open": 2,
       "realised": -28479.0
+    },
+    {
+      "date": "2026-11-02",
+      "equity": 20063.5,
+      "cash": 17181.0,
+      "open": 2,
+      "realised": -28089.0
     }
   ],
   "missed": [
@@ -3476,6 +3537,21 @@
       "date": "2026-10-20",
       "ticker": "META",
       "why": "no slots"
+    },
+    {
+      "date": "2026-11-02",
+      "ticker": "CRM",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-02",
+      "ticker": "CSCO",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-02",
+      "ticker": "XLK",
+      "why": "no contract in budget"
     }
   ],
   "migrated_from": "paper_options_state.json",
