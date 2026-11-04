@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 17181.0,
+  "cash": 10586.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2963,8 +2963,8 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 606.72998046875,
-      "last_mid": 5.9,
-      "last_bid": 5.75,
+      "last_mid": 8.525,
+      "last_bid": 8.25,
       "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
@@ -3086,8 +3086,8 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 507.1199951171875,
-      "last_mid": 22.925,
-      "last_bid": 21.85,
+      "last_mid": 33.275,
+      "last_bid": 32.05,
       "days_held": 0,
       "exit_date": null,
       "exit_bid": null,
@@ -3099,6 +3099,138 @@
           "2026-11-02",
           507.1199951171875,
           22.925
+        ]
+      ]
+    },
+    {
+      "ticker": "CRM",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-02",
+      "entry_spot": 226.17999267578125,
+      "entry_rsi2": 3.0387347415263974,
+      "expiry": "2026-12-18",
+      "strike": 210.0,
+      "dte_at_entry": 45,
+      "contracts": 1,
+      "entry_ask": 23.3,
+      "entry_spread_pct": 2.6086956521739193,
+      "entry_delta": 0.6979380091303046,
+      "cost": 2330.0,
+      "feat": {
+        "rsi2": 3.0387347415263974,
+        "above_200": 14.074372568640747,
+        "below_5": -3.2798821349390606,
+        "vol20": 2.137038822928941,
+        "ret5": -8.654742490911493,
+        "off_high": -15.04338979747989,
+        "breadth": 3.0,
+        "mkt_above_200": 3.1470163299039955
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 226.17999267578125,
+      "last_mid": 23.0,
+      "last_bid": 22.7,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-02",
+          226.17999267578125,
+          23.0
+        ]
+      ]
+    },
+    {
+      "ticker": "CSCO",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-02",
+      "entry_spot": 101.61000061035156,
+      "entry_rsi2": 3.7620945928072445,
+      "expiry": "2026-12-18",
+      "strike": 95.0,
+      "dte_at_entry": 45,
+      "contracts": 2,
+      "entry_ask": 11.85,
+      "entry_spread_pct": 1.7021276595744619,
+      "entry_delta": 0.6900748050462482,
+      "cost": 2370.0,
+      "feat": {
+        "rsi2": 3.7620945928072445,
+        "above_200": 0.29127086421485426,
+        "below_5": -5.281702216101736,
+        "vol20": 2.303865551903762,
+        "ret5": -7.828372115974269,
+        "off_high": -21.838461068960335,
+        "breadth": 3.0,
+        "mkt_above_200": 3.1470163299039955
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 101.61000061035156,
+      "last_mid": 11.75,
+      "last_bid": 11.65,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-02",
+          101.61000061035156,
+          11.75
+        ]
+      ]
+    },
+    {
+      "ticker": "XLK",
+      "sector": "tech ETF",
+      "tier": "retrospective",
+      "opened": "2026-11-02",
+      "entry_spot": 174.22000122070312,
+      "entry_rsi2": 4.638800220876519,
+      "expiry": "2026-12-18",
+      "strike": 162.5,
+      "dte_at_entry": 45,
+      "contracts": 1,
+      "entry_ask": 18.95,
+      "entry_spread_pct": 11.142061281337048,
+      "entry_delta": 0.712826100920939,
+      "cost": 1895.0,
+      "feat": {
+        "rsi2": 4.638800220876519,
+        "above_200": 2.6748689463530706,
+        "below_5": -5.618878416519413,
+        "vol20": 1.9237486153131447,
+        "ret5": -6.494206541362024,
+        "off_high": -13.752474643216273,
+        "breadth": 3.0,
+        "mkt_above_200": 3.1470163299039955
+      },
+      "ml_score": null,
+      "status": "OPEN",
+      "last_spot": 174.22000122070312,
+      "last_mid": 17.95,
+      "last_bid": 16.95,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-02",
+          174.22000122070312,
+          17.95
         ]
       ]
     }
@@ -3421,9 +3553,9 @@
     },
     {
       "date": "2026-11-02",
-      "equity": 20063.5,
-      "cash": 17181.0,
-      "open": 2,
+      "equity": 21211.0,
+      "cash": 10586.0,
+      "open": 5,
       "realised": -28089.0
     }
   ],
@@ -3555,5 +3687,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 38/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "dormant - 39/40 closed trades. It will not score anything until it has a real sample."
 }
