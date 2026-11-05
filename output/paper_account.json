@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 10586.0,
+  "cash": 11561.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -2961,15 +2961,15 @@
         "mkt_above_200": 4.5341586409894274
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 606.72998046875,
-      "last_mid": 8.525,
-      "last_bid": 8.25,
-      "days_held": 6,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 621.030029296875,
+      "last_mid": 10.025,
+      "last_bid": 9.75,
+      "days_held": 7,
+      "exit_date": "2026-11-03",
+      "exit_bid": 9.75,
+      "exit_reason": "RSI(2) 67.1 > 65",
+      "proceeds": 975.0,
       "stale": false,
       "marks": [
         [
@@ -3001,6 +3001,11 @@
           "2026-11-02",
           606.72998046875,
           5.9
+        ],
+        [
+          "2026-11-03",
+          621.030029296875,
+          10.025
         ]
       ]
     },
@@ -3085,10 +3090,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 507.1199951171875,
-      "last_mid": 33.275,
-      "last_bid": 32.05,
-      "days_held": 0,
+      "last_spot": 520.989990234375,
+      "last_mid": 63.25,
+      "last_bid": 62.2,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3099,6 +3104,11 @@
           "2026-11-02",
           507.1199951171875,
           22.925
+        ],
+        [
+          "2026-11-03",
+          520.989990234375,
+          63.25
         ]
       ]
     },
@@ -3129,10 +3139,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 226.17999267578125,
-      "last_mid": 23.0,
-      "last_bid": 22.7,
-      "days_held": 0,
+      "last_spot": 222.1999969482422,
+      "last_mid": 26.325,
+      "last_bid": 25.4,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3143,6 +3153,11 @@
           "2026-11-02",
           226.17999267578125,
           23.0
+        ],
+        [
+          "2026-11-03",
+          222.1999969482422,
+          26.325
         ]
       ]
     },
@@ -3173,10 +3188,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 101.61000061035156,
-      "last_mid": 11.75,
+      "last_spot": 102.97000122070312,
+      "last_mid": 12.075,
       "last_bid": 11.65,
-      "days_held": 0,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3187,6 +3202,11 @@
           "2026-11-02",
           101.61000061035156,
           11.75
+        ],
+        [
+          "2026-11-03",
+          102.97000122070312,
+          12.075
         ]
       ]
     },
@@ -3217,10 +3237,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 174.22000122070312,
-      "last_mid": 17.95,
-      "last_bid": 16.95,
-      "days_held": 0,
+      "last_spot": 176.50999450683594,
+      "last_mid": 17.375,
+      "last_bid": 15.45,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3231,6 +3251,11 @@
           "2026-11-02",
           174.22000122070312,
           17.95
+        ],
+        [
+          "2026-11-03",
+          176.50999450683594,
+          17.375
         ]
       ]
     }
@@ -3557,6 +3582,13 @@
       "cash": 10586.0,
       "open": 5,
       "realised": -28089.0
+    },
+    {
+      "date": "2026-11-03",
+      "equity": 24671.0,
+      "cash": 11561.0,
+      "open": 4,
+      "realised": -29444.0
     }
   ],
   "missed": [
@@ -3683,6 +3715,11 @@
     {
       "date": "2026-11-02",
       "ticker": "XLK",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-03",
+      "ticker": "PANW",
       "why": "no contract in budget"
     }
   ],
