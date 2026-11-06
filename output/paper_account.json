@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 11561.0,
+  "cash": 13781.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3089,15 +3089,15 @@
         "mkt_above_200": 3.1470163299039955
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 520.989990234375,
-      "last_mid": 63.25,
-      "last_bid": 62.2,
-      "days_held": 1,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 555.7999877929688,
+      "last_mid": 46.3,
+      "last_bid": 45.1,
+      "days_held": 2,
+      "exit_date": "2026-11-04",
+      "exit_bid": 45.1,
+      "exit_reason": "RSI(2) 89.6 > 65",
+      "proceeds": 4510.0,
       "stale": false,
       "marks": [
         [
@@ -3109,6 +3109,11 @@
           "2026-11-03",
           520.989990234375,
           63.25
+        ],
+        [
+          "2026-11-04",
+          555.7999877929688,
+          46.3
         ]
       ]
     },
@@ -3139,10 +3144,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 222.1999969482422,
-      "last_mid": 26.325,
-      "last_bid": 25.4,
-      "days_held": 1,
+      "last_spot": 227.11000061035156,
+      "last_mid": 23.55,
+      "last_bid": 23.05,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3158,6 +3163,11 @@
           "2026-11-03",
           222.1999969482422,
           26.325
+        ],
+        [
+          "2026-11-04",
+          227.11000061035156,
+          23.55
         ]
       ]
     },
@@ -3188,10 +3198,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 102.97000122070312,
-      "last_mid": 12.075,
-      "last_bid": 11.65,
-      "days_held": 1,
+      "last_spot": 103.61000061035156,
+      "last_mid": 7.300000000000001,
+      "last_bid": 6.95,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3207,6 +3217,11 @@
           "2026-11-03",
           102.97000122070312,
           12.075
+        ],
+        [
+          "2026-11-04",
+          103.61000061035156,
+          7.300000000000001
         ]
       ]
     },
@@ -3237,10 +3252,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 176.50999450683594,
-      "last_mid": 17.375,
-      "last_bid": 15.45,
-      "days_held": 1,
+      "last_spot": 176.5,
+      "last_mid": 9.075,
+      "last_bid": 8.0,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3256,6 +3271,55 @@
           "2026-11-03",
           176.50999450683594,
           17.375
+        ],
+        [
+          "2026-11-04",
+          176.5,
+          9.075
+        ]
+      ]
+    },
+    {
+      "ticker": "PANW",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-04",
+      "entry_spot": 348.0400085449219,
+      "entry_rsi2": 3.849268848872555,
+      "expiry": "2026-12-18",
+      "strike": 335.0,
+      "dte_at_entry": 43,
+      "contracts": 1,
+      "entry_ask": 22.9,
+      "entry_spread_pct": 8.656036446469242,
+      "entry_delta": 0.6183364381315763,
+      "cost": 2290.0,
+      "feat": {
+        "rsi2": 3.849268848872555,
+        "above_200": 27.83120308042424,
+        "below_5": -3.128478118774458,
+        "vol20": 3.653004265500698,
+        "ret5": -11.774692093418182,
+        "off_high": -17.115571072467095,
+        "breadth": 1.0,
+        "mkt_above_200": 5.054985820041824
+      },
+      "ml_score": -18.167706421467784,
+      "status": "OPEN",
+      "last_spot": 348.0400085449219,
+      "last_mid": 21.95,
+      "last_bid": 21.0,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-04",
+          348.0400085449219,
+          21.95
         ]
       ]
     }
@@ -3589,6 +3653,13 @@
       "cash": 11561.0,
       "open": 4,
       "realised": -29444.0
+    },
+    {
+      "date": "2026-11-04",
+      "equity": 20698.5,
+      "cash": 13781.0,
+      "open": 4,
+      "realised": -27334.0
     }
   ],
   "missed": [
@@ -3724,5 +3795,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "dormant - 39/40 closed trades. It will not score anything until it has a real sample."
+  "ml_verdict": "trained on 40 trades, but only 0 were scored live - too few to judge it yet"
 }
