@@ -3145,8 +3145,8 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 214.94000244140625,
-      "last_mid": 17.25,
-      "last_bid": 17.0,
+      "last_mid": 16.425,
+      "last_bid": 16.0,
       "days_held": 5,
       "exit_date": null,
       "exit_bid": null,
@@ -3209,8 +3209,8 @@
       "ml_score": null,
       "status": "OPEN",
       "last_spot": 98.6500015258789,
-      "last_mid": 8.399999999999999,
-      "last_bid": 8.2,
+      "last_mid": 8.0,
+      "last_bid": 7.9,
       "days_held": 5,
       "exit_date": null,
       "exit_bid": null,
@@ -3337,8 +3337,8 @@
       "ml_score": -18.167706421467784,
       "status": "OPEN",
       "last_spot": 330.8900146484375,
-      "last_mid": 28.6,
-      "last_bid": 27.0,
+      "last_mid": 25.275,
+      "last_bid": 22.8,
       "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
@@ -3710,7 +3710,7 @@
     },
     {
       "date": "2026-11-09",
-      "equity": 21271.0,
+      "equity": 20776.0,
       "cash": 15006.0,
       "open": 3,
       "realised": -28004.0
@@ -3849,5 +3849,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "trained on 41 trades, but only 0 were scored live - too few to judge it yet"
+  "ml_verdict": "trained on 42 trades, but only 0 were scored live - too few to judge it yet"
 }
