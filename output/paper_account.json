@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 15006.0,
+  "cash": 16916.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3144,10 +3144,10 @@
       },
       "ml_score": null,
       "status": "OPEN",
-      "last_spot": 214.94000244140625,
-      "last_mid": 16.425,
-      "last_bid": 16.0,
-      "days_held": 5,
+      "last_spot": 213.47999572753906,
+      "last_mid": 18.65,
+      "last_bid": 18.25,
+      "days_held": 6,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3178,6 +3178,11 @@
           "2026-11-09",
           214.94000244140625,
           17.25
+        ],
+        [
+          "2026-11-10",
+          213.47999572753906,
+          18.65
         ]
       ]
     },
@@ -3207,15 +3212,15 @@
         "mkt_above_200": 3.1470163299039955
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 98.6500015258789,
-      "last_mid": 8.0,
-      "last_bid": 7.9,
-      "days_held": 5,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 98.1500015258789,
+      "last_mid": 9.9,
+      "last_bid": 9.55,
+      "days_held": 6,
+      "exit_date": "2026-11-10",
+      "exit_bid": 9.55,
+      "exit_reason": "close > 5-day SMA",
+      "proceeds": 1910.0000000000002,
       "stale": false,
       "marks": [
         [
@@ -3242,6 +3247,11 @@
           "2026-11-09",
           98.6500015258789,
           8.399999999999999
+        ],
+        [
+          "2026-11-10",
+          98.1500015258789,
+          9.9
         ]
       ]
     },
@@ -3336,10 +3346,10 @@
       },
       "ml_score": -18.167706421467784,
       "status": "OPEN",
-      "last_spot": 330.8900146484375,
-      "last_mid": 25.275,
-      "last_bid": 22.8,
-      "days_held": 3,
+      "last_spot": 326.3599853515625,
+      "last_mid": 28.45,
+      "last_bid": 26.25,
+      "days_held": 4,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3360,6 +3370,11 @@
           "2026-11-09",
           330.8900146484375,
           28.6
+        ],
+        [
+          "2026-11-10",
+          326.3599853515625,
+          28.45
         ]
       ]
     }
@@ -3714,6 +3729,13 @@
       "cash": 15006.0,
       "open": 3,
       "realised": -28004.0
+    },
+    {
+      "date": "2026-11-10",
+      "equity": 21626.0,
+      "cash": 16916.0,
+      "open": 2,
+      "realised": -28464.0
     }
   ],
   "missed": [
