@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 16916.0,
+  "cash": 20746.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3143,15 +3143,15 @@
         "mkt_above_200": 3.1470163299039955
       },
       "ml_score": null,
-      "status": "OPEN",
-      "last_spot": 213.47999572753906,
-      "last_mid": 18.65,
-      "last_bid": 18.25,
-      "days_held": 6,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 218.00999450683594,
+      "last_mid": 18.675,
+      "last_bid": 18.05,
+      "days_held": 7,
+      "exit_date": "2026-11-11",
+      "exit_bid": 18.05,
+      "exit_reason": "RSI(2) 69.1 > 65",
+      "proceeds": 1805.0,
       "stale": false,
       "marks": [
         [
@@ -3183,6 +3183,11 @@
           "2026-11-10",
           213.47999572753906,
           18.65
+        ],
+        [
+          "2026-11-11",
+          218.00999450683594,
+          18.675
         ]
       ]
     },
@@ -3345,15 +3350,15 @@
         "mkt_above_200": 5.054985820041824
       },
       "ml_score": -18.167706421467784,
-      "status": "OPEN",
-      "last_spot": 326.3599853515625,
-      "last_mid": 28.45,
-      "last_bid": 26.25,
-      "days_held": 4,
-      "exit_date": null,
-      "exit_bid": null,
-      "exit_reason": null,
-      "proceeds": 0.0,
+      "status": "CLOSED",
+      "last_spot": 334.4700012207031,
+      "last_mid": 22.35,
+      "last_bid": 20.25,
+      "days_held": 5,
+      "exit_date": "2026-11-11",
+      "exit_bid": 20.25,
+      "exit_reason": "RSI(2) 72.3 > 65",
+      "proceeds": 2025.0,
       "stale": false,
       "marks": [
         [
@@ -3375,6 +3380,11 @@
           "2026-11-10",
           326.3599853515625,
           28.45
+        ],
+        [
+          "2026-11-11",
+          334.4700012207031,
+          22.35
         ]
       ]
     }
@@ -3736,6 +3746,13 @@
       "cash": 16916.0,
       "open": 2,
       "realised": -28464.0
+    },
+    {
+      "date": "2026-11-11",
+      "equity": 20746.0,
+      "cash": 20746.0,
+      "open": 0,
+      "realised": -29254.0
     }
   ],
   "missed": [
@@ -3871,5 +3888,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "trained on 42 trades, but only 0 were scored live - too few to judge it yet"
+  "ml_verdict": "trained on 43 trades, but only 0 were scored live - too few to judge it yet"
 }
