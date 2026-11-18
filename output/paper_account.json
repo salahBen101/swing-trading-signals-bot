@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 20746.0,
+  "cash": 14736.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3387,6 +3387,138 @@
           22.35
         ]
       ]
+    },
+    {
+      "ticker": "XBI",
+      "sector": "hlth ETF",
+      "tier": "retrospective",
+      "opened": "2026-11-17",
+      "entry_spot": 145.27999877929688,
+      "entry_rsi2": 4.774782048287037,
+      "expiry": "2026-12-18",
+      "strike": 136.0,
+      "dte_at_entry": 31,
+      "contracts": 1,
+      "entry_ask": 12.75,
+      "entry_spread_pct": 12.5,
+      "entry_delta": 0.7289183918434321,
+      "cost": 1275.0,
+      "feat": {
+        "rsi2": 4.774782048287037,
+        "above_200": 1.4758979715820297,
+        "below_5": -3.0458353069910293,
+        "vol20": 2.4679696853741087,
+        "ret5": -6.307235220741713,
+        "off_high": -14.314363807502929,
+        "breadth": 5.0,
+        "mkt_above_200": 0.013300189579257271
+      },
+      "ml_score": -17.48905968202589,
+      "status": "OPEN",
+      "last_spot": 145.27999877929688,
+      "last_mid": 12.0,
+      "last_bid": 11.25,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-17",
+          145.27999877929688,
+          12.0
+        ]
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-17",
+      "entry_spot": 506.239990234375,
+      "entry_rsi2": 4.565541472010963,
+      "expiry": "2026-12-18",
+      "strike": 500.0,
+      "dte_at_entry": 31,
+      "contracts": 1,
+      "entry_ask": 24.65,
+      "entry_spread_pct": 4.140786749482402,
+      "entry_delta": 0.5814154229002506,
+      "cost": 2465.0,
+      "feat": {
+        "rsi2": 4.565541472010963,
+        "above_200": 14.463430926790766,
+        "below_5": -2.354721757725109,
+        "vol20": 2.3766422633597477,
+        "ret5": -5.049138019755029,
+        "off_high": -8.916876330888746,
+        "breadth": 5.0,
+        "mkt_above_200": 0.013300189579257271
+      },
+      "ml_score": -26.699140728857532,
+      "status": "OPEN",
+      "last_spot": 506.239990234375,
+      "last_mid": 24.15,
+      "last_bid": 23.65,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-17",
+          506.239990234375,
+          24.15
+        ]
+      ]
+    },
+    {
+      "ticker": "ACN",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-17",
+      "entry_spot": 239.27999877929688,
+      "entry_rsi2": 2.6503876428550512,
+      "expiry": "2026-12-18",
+      "strike": 230.0,
+      "dte_at_entry": 31,
+      "contracts": 1,
+      "entry_ask": 22.7,
+      "entry_spread_pct": 13.647058823529404,
+      "entry_delta": 0.631971828719153,
+      "cost": 2270.0,
+      "feat": {
+        "rsi2": 2.6503876428550512,
+        "above_200": 25.858875627954923,
+        "below_5": -3.6000908779974528,
+        "vol20": 3.1047449067963195,
+        "ret5": -7.438787768319988,
+        "off_high": -17.07215925238176,
+        "breadth": 5.0,
+        "mkt_above_200": 0.013300189579257271
+      },
+      "ml_score": -42.18153935351643,
+      "status": "OPEN",
+      "last_spot": 239.27999877929688,
+      "last_mid": 21.25,
+      "last_bid": 19.8,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-17",
+          239.27999877929688,
+          21.25
+        ]
+      ]
     }
   ],
   "equity": [
@@ -3767,6 +3899,13 @@
       "cash": 20746.0,
       "open": 0,
       "realised": -29254.0
+    },
+    {
+      "date": "2026-11-17",
+      "equity": 20476.0,
+      "cash": 14736.0,
+      "open": 3,
+      "realised": -29254.0
     }
   ],
   "missed": [
@@ -3898,6 +4037,16 @@
     {
       "date": "2026-11-03",
       "ticker": "PANW",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-17",
+      "ticker": "XLRE",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-17",
+      "ticker": "XLY",
       "why": "no contract in budget"
     }
   ],
