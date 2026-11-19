@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 14736.0,
+  "cash": 12856.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3415,10 +3415,10 @@
       },
       "ml_score": -17.48905968202589,
       "status": "OPEN",
-      "last_spot": 145.27999877929688,
-      "last_mid": 12.0,
-      "last_bid": 11.25,
-      "days_held": 0,
+      "last_spot": 145.0399932861328,
+      "last_mid": 12.3,
+      "last_bid": 11.5,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3429,6 +3429,11 @@
           "2026-11-17",
           145.27999877929688,
           12.0
+        ],
+        [
+          "2026-11-18",
+          145.0399932861328,
+          12.3
         ]
       ]
     },
@@ -3459,10 +3464,10 @@
       },
       "ml_score": -26.699140728857532,
       "status": "OPEN",
-      "last_spot": 506.239990234375,
-      "last_mid": 24.15,
-      "last_bid": 23.65,
-      "days_held": 0,
+      "last_spot": 508.2900085449219,
+      "last_mid": 24.2,
+      "last_bid": 23.7,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3473,6 +3478,11 @@
           "2026-11-17",
           506.239990234375,
           24.15
+        ],
+        [
+          "2026-11-18",
+          508.2900085449219,
+          24.2
         ]
       ]
     },
@@ -3503,10 +3513,10 @@
       },
       "ml_score": -42.18153935351643,
       "status": "OPEN",
-      "last_spot": 239.27999877929688,
-      "last_mid": 21.25,
-      "last_bid": 19.8,
-      "days_held": 0,
+      "last_spot": 227.49000549316406,
+      "last_mid": 13.600000000000001,
+      "last_bid": 12.4,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3517,6 +3527,55 @@
           "2026-11-17",
           239.27999877929688,
           21.25
+        ],
+        [
+          "2026-11-18",
+          227.49000549316406,
+          13.600000000000001
+        ]
+      ]
+    },
+    {
+      "ticker": "SPGI",
+      "sector": "financials",
+      "tier": "retrospective",
+      "opened": "2026-11-18",
+      "entry_spot": 446.3800048828125,
+      "entry_rsi2": 4.444168758105263,
+      "expiry": "2026-12-18",
+      "strike": 440.0,
+      "dte_at_entry": 30,
+      "contracts": 1,
+      "entry_ask": 18.8,
+      "entry_spread_pct": 13.031161473087824,
+      "entry_delta": 0.5991943212010133,
+      "cost": 1880.0,
+      "feat": {
+        "rsi2": 4.444168758105263,
+        "above_200": 7.54151629664801,
+        "below_5": -3.4820659113011243,
+        "vol20": 1.763882542660599,
+        "ret5": -6.047016765495039,
+        "off_high": -13.64076326862158,
+        "breadth": 3.0,
+        "mkt_above_200": -0.32024437466888767
+      },
+      "ml_score": -15.763937295421968,
+      "status": "OPEN",
+      "last_spot": 446.3800048828125,
+      "last_mid": 17.65,
+      "last_bid": 16.5,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-18",
+          446.3800048828125,
+          17.65
         ]
       ]
     }
@@ -3906,6 +3965,13 @@
       "cash": 14736.0,
       "open": 3,
       "realised": -29254.0
+    },
+    {
+      "date": "2026-11-18",
+      "equity": 19631.0,
+      "cash": 12856.0,
+      "open": 4,
+      "realised": -29254.0
     }
   ],
   "missed": [
@@ -4047,6 +4113,16 @@
     {
       "date": "2026-11-17",
       "ticker": "XLY",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-18",
+      "ticker": "BLK",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-18",
+      "ticker": "XLV",
       "why": "no contract in budget"
     }
   ],
