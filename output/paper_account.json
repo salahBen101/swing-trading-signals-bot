@@ -1,7 +1,7 @@
 {
   "started": "2026-08-15",
   "start_equity": 50000.0,
-  "cash": 4591.0,
+  "cash": 741.0,
   "positions": [
     {
       "ticker": "AVGO",
@@ -3415,10 +3415,10 @@
       },
       "ml_score": -17.48905968202589,
       "status": "OPEN",
-      "last_spot": 144.1199951171875,
-      "last_mid": 11.524999999999999,
-      "last_bid": 10.2,
-      "days_held": 2,
+      "last_spot": 140.17999267578125,
+      "last_mid": 9.75,
+      "last_bid": 8.8,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3439,6 +3439,11 @@
           "2026-11-19",
           144.1199951171875,
           11.524999999999999
+        ],
+        [
+          "2026-11-20",
+          140.17999267578125,
+          9.75
         ]
       ]
     },
@@ -3469,10 +3474,10 @@
       },
       "ml_score": -26.699140728857532,
       "status": "OPEN",
-      "last_spot": 498.29998779296875,
-      "last_mid": 19.425,
-      "last_bid": 19.1,
-      "days_held": 2,
+      "last_spot": 484.5199890136719,
+      "last_mid": 15.274999999999999,
+      "last_bid": 14.15,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3493,6 +3498,11 @@
           "2026-11-19",
           498.29998779296875,
           19.425
+        ],
+        [
+          "2026-11-20",
+          484.5199890136719,
+          15.274999999999999
         ]
       ]
     },
@@ -3523,10 +3533,10 @@
       },
       "ml_score": -42.18153935351643,
       "status": "OPEN",
-      "last_spot": 218.5800018310547,
-      "last_mid": 8.85,
-      "last_bid": 8.2,
-      "days_held": 2,
+      "last_spot": 221.1699981689453,
+      "last_mid": 9.9,
+      "last_bid": 8.5,
+      "days_held": 3,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3547,6 +3557,11 @@
           "2026-11-19",
           218.5800018310547,
           8.85
+        ],
+        [
+          "2026-11-20",
+          221.1699981689453,
+          9.9
         ]
       ]
     },
@@ -3577,10 +3592,10 @@
       },
       "ml_score": -15.763937295421968,
       "status": "OPEN",
-      "last_spot": 442.6600036621094,
-      "last_mid": 14.9,
-      "last_bid": 14.0,
-      "days_held": 1,
+      "last_spot": 439.57000732421875,
+      "last_mid": 15.1,
+      "last_bid": 11.8,
+      "days_held": 2,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3596,6 +3611,11 @@
           "2026-11-19",
           442.6600036621094,
           14.9
+        ],
+        [
+          "2026-11-20",
+          439.57000732421875,
+          15.1
         ]
       ]
     },
@@ -3626,10 +3646,10 @@
       },
       "ml_score": -39.653646251898344,
       "status": "OPEN",
-      "last_spot": 55.58000183105469,
-      "last_mid": 2.5949999999999998,
-      "last_bid": 2.44,
-      "days_held": 0,
+      "last_spot": 54.56999969482422,
+      "last_mid": 2.3449999999999998,
+      "last_bid": 0.64,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3640,6 +3660,11 @@
           "2026-11-19",
           55.58000183105469,
           2.5949999999999998
+        ],
+        [
+          "2026-11-20",
+          54.56999969482422,
+          2.3449999999999998
         ]
       ]
     },
@@ -3670,10 +3695,10 @@
       },
       "ml_score": -42.261569948357675,
       "status": "OPEN",
-      "last_spot": 572.0399780273438,
-      "last_mid": 20.049999999999997,
-      "last_bid": 18.65,
-      "days_held": 0,
+      "last_spot": 570.0,
+      "last_mid": 20.375,
+      "last_bid": 19.1,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3684,6 +3709,11 @@
           "2026-11-19",
           572.0399780273438,
           20.049999999999997
+        ],
+        [
+          "2026-11-20",
+          570.0,
+          20.375
         ]
       ]
     },
@@ -3714,10 +3744,10 @@
       },
       "ml_score": -42.70946805766556,
       "status": "OPEN",
-      "last_spot": 402.25,
-      "last_mid": 20.0,
-      "last_bid": 19.85,
-      "days_held": 0,
+      "last_spot": 401.8699951171875,
+      "last_mid": 20.6,
+      "last_bid": 19.4,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3728,6 +3758,11 @@
           "2026-11-19",
           402.25,
           20.0
+        ],
+        [
+          "2026-11-20",
+          401.8699951171875,
+          20.6
         ]
       ]
     },
@@ -3758,10 +3793,10 @@
       },
       "ml_score": -42.70946805766556,
       "status": "OPEN",
-      "last_spot": 626.5,
-      "last_mid": 10.25,
-      "last_bid": 9.6,
-      "days_held": 0,
+      "last_spot": 625.5900268554688,
+      "last_mid": 10.5,
+      "last_bid": 9.3,
+      "days_held": 1,
       "exit_date": null,
       "exit_bid": null,
       "exit_reason": null,
@@ -3772,6 +3807,99 @@
           "2026-11-19",
           626.5,
           10.25
+        ],
+        [
+          "2026-11-20",
+          625.5900268554688,
+          10.5
+        ]
+      ]
+    },
+    {
+      "ticker": "PYPL",
+      "sector": "comms/other",
+      "tier": "retrospective",
+      "opened": "2026-11-20",
+      "entry_spot": 53.290000915527344,
+      "entry_rsi2": 0.946056301799473,
+      "expiry": "2026-12-18",
+      "strike": 55.0,
+      "dte_at_entry": 28,
+      "contracts": 13,
+      "entry_ask": 1.55,
+      "entry_spread_pct": 8.754208754208763,
+      "entry_delta": 0.4167195571916544,
+      "cost": 2015.0,
+      "feat": {
+        "rsi2": 0.946056301799473,
+        "above_200": 5.682650567641612,
+        "below_5": -6.341170865195833,
+        "vol20": 2.249186486860139,
+        "ret5": -10.104584998509647,
+        "off_high": -15.278219995587328,
+        "breadth": 5.0,
+        "mkt_above_200": -5.8607971658935165
+      },
+      "ml_score": 16.598633349130242,
+      "status": "OPEN",
+      "last_spot": 53.290000915527344,
+      "last_mid": 1.4849999999999999,
+      "last_bid": 1.42,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-20",
+          53.290000915527344,
+          1.4849999999999999
+        ]
+      ]
+    },
+    {
+      "ticker": "AAPL",
+      "sector": "tech",
+      "tier": "retrospective",
+      "opened": "2026-11-20",
+      "entry_spot": 342.55999755859375,
+      "entry_rsi2": 2.869116326793119,
+      "expiry": "2026-12-18",
+      "strike": 335.0,
+      "dte_at_entry": 28,
+      "contracts": 1,
+      "entry_ask": 18.35,
+      "entry_spread_pct": 10.31518624641834,
+      "entry_delta": 0.6167747292745777,
+      "cost": 1835.0000000000002,
+      "feat": {
+        "rsi2": 2.869116326793119,
+        "above_200": 12.966402722392845,
+        "below_5": -2.0647154967110004,
+        "vol20": 1.7838798316401023,
+        "ret5": -3.848202733279338,
+        "off_high": -3.848202733279338,
+        "breadth": 5.0,
+        "mkt_above_200": -5.8607971658935165
+      },
+      "ml_score": -48.64514223290698,
+      "status": "OPEN",
+      "last_spot": 342.55999755859375,
+      "last_mid": 17.450000000000003,
+      "last_bid": 16.55,
+      "days_held": 0,
+      "exit_date": null,
+      "exit_bid": null,
+      "exit_reason": null,
+      "proceeds": 0.0,
+      "stale": false,
+      "marks": [
+        [
+          "2026-11-20",
+          342.55999755859375,
+          17.450000000000003
         ]
       ]
     }
@@ -4175,6 +4303,13 @@
       "cash": 4591.0,
       "open": 8,
       "realised": -29254.0
+    },
+    {
+      "date": "2026-11-20",
+      "equity": 17258.0,
+      "cash": 741.0,
+      "open": 10,
+      "realised": -29254.0
     }
   ],
   "missed": [
@@ -4336,6 +4471,21 @@
     {
       "date": "2026-11-19",
       "ticker": "XLV",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-20",
+      "ticker": "BLK",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-20",
+      "ticker": "XLV",
+      "why": "no contract in budget"
+    },
+    {
+      "date": "2026-11-20",
+      "ticker": "ABNB",
       "why": "no contract in budget"
     }
   ],
