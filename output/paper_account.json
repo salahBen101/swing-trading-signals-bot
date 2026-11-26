@@ -4399,6 +4399,13 @@
       "cash": 20357.0,
       "open": 0,
       "realised": -29643.0
+    },
+    {
+      "date": "2026-11-25",
+      "equity": 20357.0,
+      "cash": 20357.0,
+      "open": 0,
+      "realised": -29643.0
     }
   ],
   "missed": [
@@ -4579,5 +4586,5 @@
     }
   ],
   "migrated_from": "paper_options_state.json",
-  "ml_verdict": "trained on 50 trades, but only 6 were scored live - too few to judge it yet"
+  "ml_verdict": "trained on 55 trades, but only 11 were scored live - too few to judge it yet"
 }
